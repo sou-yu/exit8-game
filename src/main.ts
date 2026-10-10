@@ -4,6 +4,7 @@ import { Renderer, QUALITY_LABEL, type Quality } from './render';
 import { ANOMALIES, ANOMALY_BY_ID, resetWorld, setHangingSign, type ManState } from './anomalies';
 import { numberSignTexture } from './textures';
 import { Sound } from './audio';
+import { TouchControls, isTouchDevice } from './touch';
 
 const GOAL = 8;
 const ANOMALY_RATE = 0.55;
@@ -203,23 +204,38 @@ addEventListener('mousemove', (e) => {
   player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * 0.0022, -1.3, 1.3);
 });
 const overlay = document.getElementById('overlay')!;
+// タッチ操作（iPhone / iPad）。マウスロックは使わず、左で移動・右で視点
+const touchMode = isTouchDevice();
+const touch = new TouchControls(canvas, (dx, dy) => {
+  player.yaw -= dx;
+  player.pitch = THREE.MathUtils.clamp(player.pitch - dy, -1.3, 1.3);
+});
+const START_LABEL = touchMode ? 'タップして始める' : 'クリックして始める';
+if (touchMode) document.body.classList.add('touch');
+function pause() {
+  if (game.gameState !== 'playing') return;
+  game.gameState = 'paused';
+  touch.enabled = false;
+  touch.reset();
+  overlay.classList.remove('hidden');
+  startBtn.textContent = touchMode ? 'タップして再開' : 'クリックして再開';
+}
+document.getElementById('pause')!.addEventListener('click', pause);
+document.addEventListener('visibilitychange', () => { if (document.hidden && touchMode) pause(); });
 function begin() {
   sound.start();
   if (game.gameState === 'title') game.startTime = performance.now();
   game.gameState = 'playing';
   overlay.classList.add('hidden');
+  if (touchMode) { touch.enabled = true; return; }
   try {
     (canvas.requestPointerLock?.() as Promise<void> | undefined)?.catch?.(() => {});
   } catch { /* ロック不可ならドラッグ操作 */ }
 }
 document.getElementById('start')!.addEventListener('click', begin);
-canvas.addEventListener('click', () => { if (game.gameState === 'playing') canvas.requestPointerLock?.(); });
+canvas.addEventListener('click', () => { if (game.gameState === 'playing' && !touchMode) canvas.requestPointerLock?.(); });
 document.addEventListener('pointerlockchange', () => {
-  if (!document.pointerLockElement && game.gameState === 'playing') {
-    game.gameState = 'paused';
-    overlay.classList.remove('hidden');
-    (document.getElementById('start') as HTMLButtonElement).textContent = 'クリックして再開';
-  }
+  if (!document.pointerLockElement && game.gameState === 'playing') pause();
 });
 document.getElementById('restart')!.addEventListener('click', () => {
   document.getElementById('clear')!.classList.add('hidden');
@@ -230,12 +246,13 @@ document.getElementById('restart')!.addEventListener('click', () => {
 
 // ---- 更新 ----
 function updatePlayer(dt: number) {
-  const f = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-  const s = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
-  const speed = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 3.0 : 1.8;
+  let f = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
+  let s = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
+  if (!f && !s && (touch.f || touch.s)) { f = touch.f; s = touch.s; } // スティックは倒した量で速さが変わる
+  const speed = keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.run ? 3.0 : 1.8;
   let tf = 0, ts = 0;
   if (f || s) {
-    const len = Math.hypot(f, s);
+    const len = Math.max(1, Math.hypot(f, s));
     tf = (f / len) * speed;
     ts = (s / len) * speed;
   }
@@ -343,7 +360,7 @@ function frame() {
     debugEl.textContent = `level ${game.currentLevel} | anomaly ${game.anomalyId ?? '-'} | ` +
       `pos ${player.x.toFixed(1)},${player.z.toFixed(1)} | ${game.gameState}`;
   }
-  if (performance.now() < qualityMsgUntil) hint.textContent = `${QUALITY_LABEL[renderer.level]}（Qキーで切替）`;
+  if (performance.now() < qualityMsgUntil) hint.textContent = touchMode ? QUALITY_LABEL[renderer.level] : `${QUALITY_LABEL[renderer.level]}（Qキーで切替）`;
   renderer.render(dt, world.envLevel, game.gameState === 'playing', time);
   frames++;
   (window as unknown as { __frames: number }).__frames = frames;
@@ -372,6 +389,9 @@ async function init() {
     renderer.setQuality(Math.min(2, Math.max(0, Number(params.get('q')) || 0)) as Quality);
   } else if (safeMode) {
     renderer.setQuality(2);
+  } else if (touchMode) {
+    // スマートフォンは軽量、タブレットは標準から始める
+    renderer.setQuality(Math.min(screen.width, screen.height) < 600 ? 2 : 1);
   } else if (renderer.integratedGpu) {
     renderer.setQuality(1); // 内蔵 GPU は標準から始める（Q キーで高品質にもできる）
   }
@@ -385,7 +405,7 @@ async function init() {
   clearTimeout(slow);
   setStatus('');
   startBtn.disabled = false;
-  startBtn.textContent = 'クリックして始める';
+  startBtn.textContent = START_LABEL;
   try { localStorage.removeItem(SAFE_KEY); } catch { /* なくてもよい */ }
   frame();
   exposeForTests();

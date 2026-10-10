@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>8番出口</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
@@ -18,7 +19,8 @@
         <li>判断を間違えると 0 番に戻される。</li>
         <li>8 番出口から地上へ出ればクリア。</li>
       </ul>
-      <p class="keys">移動: W A S D / 矢印キー　視点: マウス（動かない場合はドラッグ）　早歩き: Shift　画質切替（高品質 / 標準 / 軽量）: Q　負荷表示: F　一時停止: Esc</p>
+      <p class="keys keys-touch">移動: 画面の左側を指でなぞる（大きく倒すと早歩き）　視点: 画面の右側をなぞる　一時停止: 右上の Ⅱ</p>
+      <p class="keys keys-desk">移動: W A S D / 矢印キー　視点: マウス（動かない場合はドラッグ）　早歩き: Shift　画質切替（高品質 / 標準 / 軽量）: Q　負荷表示: F　一時停止: Esc</p>
       <p id="status" class="status"></p>
       <button id="start" disabled>準備中…</button>
     </div>
@@ -34,6 +36,7 @@
   <div id="hint"></div>
   <div id="debug"></div>
   <div id="stats"></div>
+  <button id="pause" aria-label="一時停止">Ⅱ</button>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

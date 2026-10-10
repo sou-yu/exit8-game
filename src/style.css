@@ -21,3 +21,19 @@ button:disabled { background: #3a4a44; color: #aab; cursor: default; }
 #debug { position: fixed; left: 8px; top: 8px; font: 12px monospace; color: #ff0; pointer-events: none; }
 #stats { position: fixed; right: 8px; top: 8px; font: 12px/1.5 monospace; color: #dfe; background: rgba(0,0,0,.45); padding: 4px 8px; border-radius: 4px; pointer-events: none; white-space: pre; display: none; }
 #stats.on { display: block; }
+
+/* タッチ操作 */
+body.touch { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; touch-action: none; }
+#app canvas { touch-action: none; }
+.keys-touch, #pause { display: none; }
+body.touch .keys-touch { display: block; }
+body.touch .keys-desk { display: none; }
+body.touch #pause { display: block; position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right));
+  margin: 0; width: 44px; height: 44px; padding: 0; font-size: 18px; border-radius: 22px; background: rgba(0,0,0,.35); color: #fff; z-index: 5; }
+.stick { position: fixed; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.15); pointer-events: none; display: none; z-index: 4; }
+.stick.on { display: block; }
+.stick-knob { position: absolute; left: 34px; top: 34px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.45); }
+@media (max-width: 600px) { .panel { padding: 18px 16px; } .panel h1 { font-size: 26px; } .rules { line-height: 1.6; font-size: 14px; } }
+.overlay { overflow-y: auto; }
+@media (max-height: 480px) { .panel { padding: 12px 18px; } .panel h1 { font-size: 22px; } .sub { margin-bottom: 8px; } .rules { line-height: 1.45; font-size: 13px; margin-bottom: 6px; } .keys { margin: 4px 0; } }
