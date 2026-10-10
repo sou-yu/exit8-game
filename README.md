@@ -5,9 +5,8 @@
 
 ## 遊び方
 
-- 公開版: https://sou-yu.github.io/exit8-game/
-
 - すぐ遊ぶ: `dist/index.html` をブラウザ（Chrome / Edge）で開く
+- 公開版: https://sou-yu.github.io/exit8-game/
 - 開発する: Node.js を入れて、このフォルダで
   ```
   npm install
@@ -31,7 +30,7 @@ iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと�
 | `src/bake.ts` | 隅の陰り・汚れ・黄ばみ・粗さのむらを壁・床・天井ごとに焼き込む |
 | `src/lighting.ts` | 蛍光灯（面光源と影付きライトの割り当て、個体差、非常灯） |
 | `src/render.ts` | 後処理と画質プリセット、負荷の計測 |
-| `src/man.ts` | 通行人（体の曲面と顔テクスチャ） |
+| `src/man.ts` | 通行人（人物モデル `src/assets/man.glb` の読み込み、歩行と待機の切り替え、笑顔） |
 | `src/anomalies.ts` | 異変の一覧と、通常状態に戻す処理 |
 | `src/textures.ts` | 看板・広告などの絵（すべてプログラムで描画） |
 | `src/audio.ts` | 空調音・足音などの効果音（WebAudioで合成） |
@@ -71,7 +70,7 @@ iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと�
 
 ## 描画（実写に近づけるための作り）
 
-画像・3Dモデルなどの外部素材は使っていない（模様・看板・人物はすべてプログラムで生成）。
+通行人の人物モデル（下の「通行人のモデル」）以外は外部素材を使っていない（模様・看板はすべてプログラムで生成）。
 Three.js r186。変更前の画面を同じ視点で撮り、CGらしく見える原因ごとに直した。
 
 | 変更前の原因 | 対策 |
@@ -82,7 +81,7 @@ Three.js r186。変更前の画面を同じ視点で撮り、CGらしく見え�
 | 接触影がない | 焼き込みの陰り（巾木・帯の下・入隅・ポスターやドアのまわり）＋ GTAO ＋ 影付きライト（PCF、bias / normalBias 調整）＋ 足もとの陰り |
 | 模様の繰り返しが目立つ | 1m 周期の細かい模様に、場所ごとのむら（焼き込み）を重ねる。ループで重なる場所は同じむらになるよう対称に置く |
 | 露出が高く白飛び、光のもやが広い | 照明の明るさの比を実際の蛍光灯に近づけ、露出とホワイトバランスで白い壁が明るい白に写るよう合わせた。Bloom は灯具のまわりのにじみだけ |
-| 通行人が箱の組み合わせ | 胴・手足・頭を断面が変わる曲面で作り、顔は頭の曲面に描き込んだ |
+| 通行人が箱の組み合わせ | Blender で作った人物モデル（骨格・歩行アニメーション・笑顔の形状付き）に置き換えた |
 
 描画の流れ: シーン（HDR, MSAA）→ GTAO → Bloom → ACES Filmic + sRGB（OutputPass）→ FXAA（標準・軽量）→ 色調（低めの彩度、陰は青みのある灰）・控えめな周辺減光・ディザ。
 IBL は通路そのものを2回写した環境マップ（PMREM。白い壁どうしの照り返しを2回分）。被写界深度・色収差・画面ノイズは使わない。
@@ -99,3 +98,32 @@ IBL は通路そのものを2回写した環境マップ（PMREM。白い壁ど�
 - 平均フレーム時間が 21ms を超えると自動で1段下げる。Q キーで手動切替、`?q=0|1|2` で固定
 - F キーで fps・GPU 時間（対応ブラウザのみ）・描画呼び出し数・三角形数・解像度を表示
 - 器具・カバー・非常灯・天井設備・点字ブロックは InstancedMesh。面光源は 12〜18m でなめらかに打ち切る
+
+## 通行人のモデル
+
+Blender で作った人物モデル（`office_man_rigged.glb` 通常の顔、`office_man_smile.glb` 笑顔）を、ゲーム用に1つのファイル `src/assets/man.glb`（約1.7MB）にまとめてビルド時に HTML へ埋め込んでいる。
+
+- 身長 約1.75m、骨 32本。歩行（Walk）・待機（Idle）の1秒ループと、笑顔の形状（モーフ Smile）を使う
+- 普段は通常の顔。異変 man_smile ではモーフを 1 にし、顔の画像を笑顔用（`head_smile`）に差し替える
+- 歩く速さは 0.51 m/秒。歩行アニメーションの歩幅に合わせ、足が床で滑らない速さにしている（`src/man.ts` の `WALK_SPEED`）
+- 立ち止まる異変（man_stare）では待機の動きへなめらかに切り替え、こちらへゆっくり向き直る
+- 頭部の土台は MakeHuman のベースメッシュ（CC0 1.0）。顔・髪・衣服の画像は参照用に用意した写真から作ったもの
+
+元の2ファイル（合計 約28MB）からの軽量化（`tools/man/`）:
+
+| 項目 | 内容 |
+| --- | --- |
+| 画像 | PNG を JPEG に（顔は 2048px のまま、服 1448px、鞄・歯 512px） |
+| 形状 | 手・シャツ・ズボン・鞄の金具だけ間引いた（18.0万 → 10.5万三角形）。顔・目・口の中・歯は元のまま |
+| アニメーション | 30fps の段付き（STEP）を補間（LINEAR）にし、60fps でもなめらかに動くようにした |
+| 圧縮 | 量子化（KHR_mesh_quantization）と meshopt 圧縮（EXT_meshopt_compression） |
+| 笑顔 | 2つのファイルは顔の画像以外が同じなので、笑顔の顔画像だけを同じファイルに追加した |
+
+作り直すとき（Blender から書き出し直したとき）は、作業用フォルダに `@gltf-transform/core@4 @gltf-transform/functions@4 @gltf-transform/extensions@4 meshoptimizer@0.22` を入れ、Python の Pillow を用意して:
+
+```
+node tools/man/extract-images.cjs office_man_rigged.glb img/n
+node tools/man/extract-images.cjs office_man_smile.glb img/s
+python tools/man/textures.py img jpg
+node tools/man/optimize.mjs office_man_rigged.glb src/assets/man.glb jpg
+```

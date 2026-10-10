@@ -5,6 +5,7 @@ import { ANOMALIES, ANOMALY_BY_ID, resetWorld, setHangingSign, type ManState } f
 import { numberSignTexture } from './textures';
 import { Sound } from './audio';
 import { TouchControls, isTouchDevice } from './touch';
+import { loadMan, WALK_SPEED } from './man';
 
 const GOAL = 8;
 const ANOMALY_RATE = 0.55;
@@ -76,7 +77,7 @@ const game = {
 const player = { x: 1.5, z: 1.5, yaw: -Math.PI / 2, pitch: 0, bob: 0, stepAcc: 0 };
 /** 前後・左右の速さ（m/s、体の向き基準）。急に止まったり動き出したりしないよう、なめらかに追従させる */
 const vel = { f: 0, s: 0, amp: 0 };
-const man: ManState = { z: -LM + 1, walking: false, visible: false, speed: 1.05, stare: false };
+const man: ManState = { z: -LM + 1, walking: false, visible: false, speed: WALK_SPEED, stare: false };
 
 const signShown = new Map<THREE.Mesh, number>();
 function setSign(mesh: THREE.Mesh, n: number) {
@@ -136,6 +137,8 @@ function generateCorridor() {
   man.walking = false;
   man.visible = false;
   world.man.group.visible = false;
+  world.man.walk.time = 0;
+  manWalkW = 1;
   sound.setAmbient(0.35);
 }
 
@@ -294,7 +297,9 @@ function carrySign(shown: number) {
   setSign(world.signs.aWest, shown);
 }
 
-function updateMan(dt: number, time: number) {
+/** 通行人の歩行アニメーションの重み（1 で歩行、0 で待機） */
+let manWalkW = 1;
+function updateMan(dt: number) {
   const g = world.man.group;
   if (!man.walking && !man.visible && player.x > 5.5 && player.z < W) {
     man.walking = true;
@@ -308,17 +313,20 @@ function updateMan(dt: number, time: number) {
   if (man.walking) {
     man.z += man.speed * dt;
     g.rotation.y = 0;
-    const sw = Math.sin(time * 5.6) * 0.45;
-    world.man.legL.rotation.x = sw;
-    world.man.legR.rotation.x = -sw;
-    world.man.armL.rotation.x = -sw * 0.6;
-    world.man.armR.rotation.x = sw * 0.3;
   } else {
-    g.rotation.y = Math.atan2(player.x - mx, player.z - man.z);
-    world.man.legL.rotation.x = world.man.legR.rotation.x = 0;
-    world.man.armL.rotation.x = world.man.armR.rotation.x = 0;
+    // 立ち止まり、こちらへゆっくり向き直る
+    const target = Math.atan2(player.x - mx, player.z - man.z);
+    let diff = target - g.rotation.y;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    g.rotation.y += diff * (1 - Math.exp(-dt / 0.3));
   }
-  g.position.set(mx, Math.abs(Math.sin(time * 5.6)) * (man.walking ? 0.03 : 0), man.z);
+  // 歩行と待機のアニメーションをなめらかに切り替える（歩幅は移動の速さに合わせる）
+  manWalkW += ((man.walking ? 1 : 0) - manWalkW) * (1 - Math.exp(-dt / 0.15));
+  world.man.walk.setEffectiveWeight(manWalkW);
+  world.man.idle.setEffectiveWeight(1 - manWalkW);
+  world.man.setPace(man.speed);
+  world.man.mixer.update(dt);
+  g.position.set(mx, 0, man.z);
   if (man.z > -1.2) { man.visible = false; g.visible = false; }
 }
 
@@ -337,7 +345,7 @@ function frame() {
   if (game.gameState === 'playing') {
     updatePlayer(dt);
     if (game.enteredM) game.tInM += dt;
-    updateMan(dt, time);
+    updateMan(dt);
     const a = game.anomalyId ? ANOMALY_BY_ID.get(game.anomalyId) : null;
     a?.update?.({
       world, dt, px: player.x, pz: player.z, tInM: game.tInM, man,
@@ -379,9 +387,12 @@ function frame() {
 async function init() {
   startBtn.disabled = true;
   startBtn.textContent = '準備中…';
+  setStatus('通行人を読み込んでいます');
+  await nextPaint();
+  const manModel = await loadMan();
   setStatus('通路を組み立てています');
   await nextPaint();
-  world = buildWorld();
+  world = buildWorld(manModel);
   scene.add(world.group);
   renderer.attach(world.lighting);
   if (params.has('q')) {
@@ -399,9 +410,13 @@ async function init() {
   setStatus('照明を準備しています');
   const slow = setTimeout(() => setStatus('照明を準備しています（時間がかかっています。そのままお待ちください）'), 15000);
   await nextPaint();
+  // 通行人は最初は隠れているので、シェーダーを作る間だけ見せておく（初めて現れたときに止まらないように）
+  world.man.group.visible = true;
+  renderer.gl.initTexture(world.man.smileTex);
   await renderer.precompile();
   renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow]);
   await renderer.precompile();
+  warmUpMan();
   clearTimeout(slow);
   setStatus('');
   startBtn.disabled = false;
@@ -409,6 +424,18 @@ async function init() {
   try { localStorage.removeItem(SAFE_KEY); } catch { /* なくてもよい */ }
   frame();
   exposeForTests();
+}
+
+/** 影と AO で使うシェーダーは実際に描くまで作られないので、通行人を目の前に置いて 1 枚描いておく */
+function warmUpMan() {
+  const g = world.man.group;
+  g.visible = true;
+  g.position.set(player.x + 2.5, 0, player.z); // 開始時は +x の向きを見ている
+  camera.position.set(player.x, EYE, player.z);
+  camera.rotation.set(0, player.yaw, 0);
+  world.lighting.update(camera.position);
+  renderer.render(0, world.envLevel, false, 0);
+  g.visible = false;
 }
 
 function exposeForTests() {

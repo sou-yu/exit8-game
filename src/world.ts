@@ -7,7 +7,7 @@ import { bakeCeiling, bakeFloor, bakeWalls, type WallProp } from './bake';
 import { CEIL_ITEMS, FORWARD_SHIFT, H, LM, LS, ROOMS, W, WALLS } from './layout';
 import { Geo, PROFILES, cornerGuards, expansionJoint, extrude, mRange, roomPlane, tactileLayout } from './shell';
 import { Lighting, type Lamp } from './lighting';
-import { buildMan, buildShadow, type Man } from './man';
+import { buildShadow, type Man } from './man';
 
 export { W, H, LS, LM, S_CENTER, FORWARD_SHIFT, canStand } from './layout';
 export type { Lamp } from './lighting';
@@ -95,7 +95,7 @@ function wallProps(): WallProp[] {
   return p;
 }
 
-export function buildWorld(): World {
+export function buildWorld(man: Man): World {
   const group = new THREE.Group();
 
   // ================= 外殻 =================
@@ -455,7 +455,6 @@ export function buildWorld(): World {
     group.add(v);
   });
 
-  const man = buildMan();
   group.add(man.group);
   const shadow = buildShadow();
   group.add(shadow);

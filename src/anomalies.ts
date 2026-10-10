@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as T from './textures';
-import { faceTexture } from './man';
+import { WALK_SPEED } from './man';
 import { LM, LS, W, type World } from './world';
 
 export interface Ctx {
@@ -30,8 +30,6 @@ export interface Anomaly {
   update?(ctx: Ctx, mem: Record<string, number>): void;
 }
 
-const faceNormal = faceTexture('normal');
-const faceSmile = faceTexture('smile');
 const posterCache = new Map<string, THREE.Texture>();
 function poster(kind: T.PosterKind, strange: boolean) {
   const key = kind + strange;
@@ -69,10 +67,9 @@ export function resetWorld(w: World, man: ManState) {
   w.mCeiling.position.y = 0;
   w.mHeaders.forEach((h) => (h.visible = false));
   w.hangingSign.position.y = w.hangingBaseY;
-  w.man.faceMat.map = faceNormal;
-  w.man.faceMat.needsUpdate = true;
+  w.man.setSmile(false);
   w.shadow.visible = false;
-  man.speed = 1.05;
+  man.speed = WALK_SPEED;
   man.stare = false;
 }
 
@@ -116,10 +113,7 @@ export const ANOMALIES: Anomaly[] = [
   },
   {
     id: 'man_smile', name: '通行人が満面の笑みを浮かべている', category: 'B',
-    apply(w) {
-      w.man.faceMat.map = faceSmile;
-      w.man.faceMat.needsUpdate = true;
-    },
+    apply(w) { w.man.setSmile(true); },
   },
   {
     id: 'man_stare', name: '通行人が立ち止まってこちらを見つめる', category: 'B',
