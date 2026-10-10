@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>8番出口</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app"></div>
+  <div id="overlay" class="overlay">
+    <div class="panel">
+      <h1>8番出口</h1>
+      <p class="sub">EXIT 8</p>
+      <ul class="rules">
+        <li>いつもと違うところ（異変）を見つけたら、すぐに引き返す。</li>
+        <li>何も変わっていなければ、そのまま先へ進む。</li>
+        <li>判断を間違えると 0 番に戻される。</li>
+        <li>8 番出口から地上へ出ればクリア。</li>
+      </ul>
+      <p class="keys">移動: W A S D / 矢印キー　視点: マウス（動かない場合はドラッグ）　早歩き: Shift　画質切替（高品質 / 標準 / 軽量）: Q　負荷表示: F　一時停止: Esc</p>
+      <p id="status" class="status"></p>
+      <button id="start" disabled>準備中…</button>
+    </div>
+  </div>
+  <div id="clear" class="overlay hidden">
+    <div class="panel">
+      <h1>地上に出た</h1>
+      <p id="clear-time" class="sub"></p>
+      <p id="clear-found"></p>
+      <button id="restart">もう一度あそぶ</button>
+    </div>
+  </div>
+  <div id="hint"></div>
+  <div id="debug"></div>
+  <div id="stats"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
