@@ -255,7 +255,7 @@ export function posterTexture(kind: PosterKind, strange: boolean | 'phone' = fal
       g.fillStyle = '#ffffff'; g.fillRect(0, 0, 360, 504);
       g.strokeStyle = '#d33'; g.lineWidth = 14;
       g.beginPath(); g.arc(180, 200, 110, 0, Math.PI * 2); g.stroke();
-      // 走る人のピクト（異変: 頭が首から離れて白い目が付き、後ろの腕の先が鉤爪の指になる）
+      // 走る人のピクト（異変: 頭が首から離れて白い目が付き、後ろの腕がだらりと下がる）
       g.fillStyle = '#222';
       g.lineWidth = 16; g.strokeStyle = '#222'; g.lineCap = 'round'; g.lineJoin = 'round';
       if (strange) {
@@ -273,17 +273,9 @@ export function posterTexture(kind: PosterKind, strange: boolean | 'phone' = fal
       g.beginPath(); g.moveTo(185, 155); g.lineTo(170, 220); g.lineTo(130, 270); g.stroke();
       g.beginPath(); g.moveTo(170, 220); g.lineTo(215, 255); g.lineTo(205, 290); g.stroke();
       if (strange) {
-        // 後ろの腕はだらりと下がり、手首から細く曲がった指が4本
+        // 後ろの腕はだらりと下がる
         g.beginPath(); g.moveTo(185, 165); g.lineTo(225, 195); g.stroke();
         g.beginPath(); g.moveTo(185, 165); g.lineTo(148, 196); g.lineTo(128, 214); g.stroke();
-        g.lineWidth = 3.5;
-        for (const [dx, len, bend] of [[-9, 30, 0.5], [-3, 34, 0.6], [3, 31, 0.7], [9, 22, 0.9]]) {
-          g.beginPath();
-          g.moveTo(128 + dx * 0.6, 216);
-          g.quadraticCurveTo(122 + dx, 216 + len * 0.6, 126 + dx + len * bend * 0.35, 216 + len);
-          g.stroke();
-        }
-        g.lineWidth = 16;
       } else {
         g.beginPath(); g.moveTo(140, 180); g.lineTo(185, 165); g.lineTo(225, 195); g.stroke();
       }

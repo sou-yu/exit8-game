@@ -163,7 +163,7 @@ export const ANOMALIES: Anomaly[] = [
     },
   },
   {
-    id: 'poster_manner', name: 'マナーポスターの人の頭が外れ、手が鉤爪になっている', category: 'A',
+    id: 'poster_manner', name: 'マナーポスターの人の頭が首から離れている', category: 'A',
     apply(w) {
       const p = w.posters.find((q) => q.kind === 'manner')!;
       (p.mesh.material as THREE.MeshStandardMaterial).map = poster('manner', true);

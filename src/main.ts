@@ -8,7 +8,7 @@ import { TouchControls, isTouchDevice } from './touch';
 import { loadMan, WALK_SPEED } from './man';
 
 const GOAL = 8;
-const ANOMALY_RATE = 0.55;
+const ANOMALY_RATE = 0.6;
 const EYE = 1.6;
 const RADIUS = 0.3;
 /** 縦の視野角（度）。人の目で見た印象に近い、広角すぎない値 */
