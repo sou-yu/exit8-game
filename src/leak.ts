@@ -136,8 +136,8 @@ export function buildLeak(wallX: number, ventZ: number): Leak {
   seed = 7;
   const group = new THREE.Group();
   group.visible = false;
-  // 濡れた赤黒い液体（暗い赤、強い艶）
-  const wet = { color: 0x4a0706, roughness: 0.14, metalness: 0 };
+  // 濡れた赤い液体（血のような赤、強い艶）
+  const wet = { color: 0x8c0b08, roughness: 0.14, metalness: 0 };
   const streakMat = new THREE.MeshStandardMaterial({
     // 斜めから見たときにぼけた縁が白く光らないよう、薄い所は切り捨てる
     ...wet, alphaMap: streakMask(), transparent: true, alphaTest: 0.35, depthWrite: false, envMapIntensity: 0.6,
@@ -157,7 +157,7 @@ export function buildLeak(wallX: number, ventZ: number): Leak {
   }
 
   const puddleMat = new THREE.MeshStandardMaterial({
-    color: 0x330404, roughness: 0.05, metalness: 0, alphaMap: puddleMask(), transparent: true, depthWrite: false,
+    color: 0x6e0705, roughness: 0.05, metalness: 0, alphaMap: puddleMask(), transparent: true, depthWrite: false,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
   });
   const puddle = new THREE.Mesh(new THREE.PlaneGeometry(PUDDLE_W, PUDDLE_L), puddleMat);
@@ -176,7 +176,7 @@ export function buildLeak(wallX: number, ventZ: number): Leak {
   group.add(drop);
   // 着地点に広がる波紋（艶のある輪が広がりながら消える）
   const rippleMat = new THREE.MeshStandardMaterial({
-    color: 0x5a0c0a, roughness: 0.02, metalness: 0, transparent: true, opacity: 0, depthWrite: false,
+    color: 0x9a1410, roughness: 0.02, metalness: 0, transparent: true, opacity: 0, depthWrite: false,
   });
   const ripple = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 40), rippleMat);
   ripple.rotation.x = -Math.PI / 2;
