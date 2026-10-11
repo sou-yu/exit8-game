@@ -86,6 +86,24 @@ export class Sound {
     o.stop(t + 0.9);
   }
 
+  /** しずくが水たまりに落ちる音（短く高い音が下がる） */
+  drip(vol = 1) {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    const t = ctx.currentTime;
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1500 + Math.random() * 300, t);
+    o.frequency.exponentialRampToValueAtTime(520, t + 0.07);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09 * vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g).connect(ctx.destination);
+    o.start(t);
+    o.stop(t + 0.15);
+  }
+
   flicker() {
     for (let i = 0; i < 6; i++) setTimeout(() => this.burst(3000, 4, 0.05, 0.6, 2), i * 180 + Math.random() * 80);
   }

@@ -8,6 +8,7 @@ import { CEIL_ITEMS, FORWARD_SHIFT, H, LM, LS, ROOMS, W, WALLS } from './layout'
 import { Geo, PROFILES, cornerGuards, expansionJoint, extrude, mRange, roomPlane, tactileLayout } from './shell';
 import { Lighting, type Lamp } from './lighting';
 import { buildShadow, type Man } from './man';
+import { buildLeak, type Leak } from './leak';
 
 export { W, H, LS, LM, S_CENTER, FORWARD_SHIFT, canStand } from './layout';
 export type { Lamp } from './lighting';
@@ -24,6 +25,8 @@ export interface World {
   mCeiling: THREE.Group;
   mHeaders: THREE.Mesh[];
   hangingSign: THREE.Mesh;
+  /** 出口案内の裏の殴り書き（異変、普段は非表示） */
+  hangingScrawl: THREE.Mesh;
   hangingBaseY: number;
   posters: { mesh: THREE.Mesh; kind: T.PosterKind }[];
   door: THREE.Object3D; // ヒンジを軸に回す
@@ -31,6 +34,8 @@ export interface World {
   signs: { aEast: THREE.Mesh; aWest: THREE.Mesh; bEast: THREE.Mesh; bWest: THREE.Mesh };
   man: Man;
   shadow: THREE.Group;
+  /** 換気口から赤い液体が垂れる異変の小道具（普段は非表示） */
+  leak: Leak;
 }
 
 /** 壁の向き: 法線 (nx, nz) を向く物を (x, y, z) に置く */
@@ -285,6 +290,15 @@ export function buildWorld(man: Man): World {
     plate.position.set(dx, 0.446, 0);
     hangingSign.add(plate);
   }
+  // 裏面（縁のアルミの裏）に貼る殴り書き
+  const hangingScrawl = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.43), new THREE.MeshStandardMaterial({
+    map: T.scrawlTexture(), transparent: true, depthWrite: false, roughness: 0.45, metalness: 0,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  }));
+  hangingScrawl.rotation.y = Math.PI;
+  hangingScrawl.position.z = -0.0375;
+  hangingScrawl.visible = false;
+  hangingSign.add(hangingScrawl);
   group.add(hangingSign);
 
   // 待合のきまり看板（ラミネートした印刷物をアルミの板に貼ったもの）
@@ -455,12 +469,15 @@ export function buildWorld(man: Man): World {
     group.add(v);
   });
 
+  const leak = buildLeak(LS, VENT_Z[0]);
+  group.add(leak.group);
+
   group.add(man.group);
   const shadow = buildShadow();
   group.add(shadow);
 
   return {
     group, lighting, lamps: lighting.lamps, envLevel: 1, mStripeMat, mCeiling, mHeaders, hangingSign, hangingBaseY,
-    posters, door, doorVoid, signs, man, shadow,
+    posters, door, doorVoid, signs, man, shadow, leak, hangingScrawl,
   };
 }

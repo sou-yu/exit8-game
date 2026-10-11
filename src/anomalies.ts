@@ -11,7 +11,7 @@ export interface Ctx {
   /** 判定通路に入ってからの経過時間（入っていなければ -1） */
   tInM: number;
   man: ManState;
-  sound: (name: 'thud' | 'flicker') => void;
+  sound: (name: 'thud' | 'flicker' | 'drip', vol?: number) => void;
 }
 
 export interface ManState {
@@ -69,6 +69,8 @@ export function resetWorld(w: World, man: ManState) {
   w.hangingSign.position.y = w.hangingBaseY;
   w.man.setSmile(false);
   w.shadow.visible = false;
+  w.leak.group.visible = false;
+  w.hangingScrawl.visible = false;
   man.speed = WALK_SPEED;
   man.stare = false;
 }
@@ -144,6 +146,19 @@ export const ANOMALIES: Anomaly[] = [
       }
       // 停電から少し遅れて非常灯が点く
       if (mem.dark) w.lighting.emergency = Math.min(1, Math.max(0, (mem.t - 1.9) / 0.4));
+    },
+  },
+  {
+    id: 'sign_scrawl', name: '出口案内の裏に「戻れ！戻れ！戻れ！」と書いてある', category: 'A',
+    apply(w) { w.hangingScrawl.visible = true; },
+  },
+  {
+    id: 'vent_blood', name: '換気口から赤い液体が垂れ、床に水たまりができている', category: 'D',
+    apply(w) { w.leak.group.visible = true; },
+    update(ctx) {
+      const d = ctx.world.leak.update(ctx.dt, ctx.px, ctx.pz);
+      // しずくの落ちる音（近いほど大きい）
+      if (d !== null && d < 14) ctx.sound('drip', Math.min(1, 2.5 / Math.max(1, d)));
     },
   },
   {

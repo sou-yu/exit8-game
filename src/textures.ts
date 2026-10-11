@@ -119,6 +119,44 @@ export function hangingSignTexture(mode: 'normal' | 'reversed' | 'goal'): THREE.
   return toTexture(c);
 }
 
+/** 出口案内の裏に赤いスプレーで殴り書きした文字（異変）。透明の上に描く */
+export function scrawlTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(1024, 192);
+  let s = 11;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const chars = [...'戻れ！戻れ！戻れ！'];
+  let x = 80;
+  for (const ch of chars) {
+    const size = (ch === '！' ? 104 : 124) * (0.9 + rnd() * 0.2);
+    const y = 92 + (rnd() - 0.5) * 22;
+    const bang = ch === '！';
+    g.save();
+    g.translate(bang ? x - 34 : x, y);
+    g.rotate((rnd() - 0.5) * 0.22);
+    g.font = `900 ${size}px ${FONT}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    // スプレーのにじみ（薄く広く）→ 本体
+    g.shadowColor = 'rgba(120,8,6,0.55)';
+    g.shadowBlur = 7;
+    g.fillStyle = '#8f0f0b';
+    g.fillText(ch, 0, 0);
+    g.restore();
+    // 塗料の垂れ
+    for (let k = 0; k < 2; k++) {
+      if (rnd() < 0.45) continue;
+      const dx = x + (rnd() - 0.5) * size * 0.6, y0 = y + size * 0.3, len = 10 + rnd() * 45;
+      g.fillStyle = '#7d0c09';
+      g.fillRect(dx - 1.5, y0, 3, len);
+      g.beginPath();
+      g.arc(dx, y0 + len, 3, 0, Math.PI * 2);
+      g.fill();
+    }
+    x += ch === '！' ? 66 : 118;
+  }
+  return toTexture(c);
+}
+
 export function guideTexture(): THREE.CanvasTexture {
   const [c, g] = canvas(640, 448);
   g.fillStyle = '#f3f1ea';

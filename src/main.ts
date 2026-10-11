@@ -349,7 +349,7 @@ function frame() {
     const a = game.anomalyId ? ANOMALY_BY_ID.get(game.anomalyId) : null;
     a?.update?.({
       world, dt, px: player.x, pz: player.z, tInM: game.tInM, man,
-      sound: (n) => (n === 'thud' ? sound.thud() : sound.flicker()),
+      sound: (n, vol) => (n === 'thud' ? sound.thud() : n === 'drip' ? sound.drip(vol) : sound.flicker()),
     }, game.mem);
     hint.textContent = game.currentLevel === 0 && !game.enteredM && time < 30
       ? '番号の看板を確かめて、先の通路へ。いつもと違えば引き返す。' : '';
@@ -412,11 +412,15 @@ async function init() {
   await nextPaint();
   // 通行人は最初は隠れているので、シェーダーを作る間だけ見せておく（初めて現れたときに止まらないように）
   world.man.group.visible = true;
+  world.leak.group.visible = true; // 異変の小道具も同じ
+  world.hangingScrawl.visible = true;
   renderer.gl.initTexture(world.man.smileTex);
   await renderer.precompile();
-  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow]);
+  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.hangingScrawl]);
   await renderer.precompile();
   warmUpMan();
+  world.leak.group.visible = false;
+  world.hangingScrawl.visible = false;
   clearTimeout(slow);
   setStatus('');
   startBtn.disabled = false;
