@@ -180,7 +180,10 @@ export function guideTexture(): THREE.CanvasTexture {
 
 export type PosterKind = 'bath' | 'bakery' | 'eye' | 'books' | 'manner';
 
-export function posterTexture(kind: PosterKind, strange = false): THREE.CanvasTexture {
+/** strange: 異変の絵（眼科だけは 'phone' で電話番号だけが変わる） */
+export function posterTexture(kind: PosterKind, strange: boolean | 'phone' = false): THREE.CanvasTexture {
+  const phone = strange === 'phone';
+  if (phone) strange = false;
   const [c, g] = canvas(360, 504);
   switch (kind) {
     case 'bath': {
@@ -191,7 +194,7 @@ export function posterTexture(kind: PosterKind, strange = false): THREE.CanvasTe
         for (let x = 0; x <= 360; x += 10) g.lineTo(x, 330 + k * 30 + Math.sin(x / 25 + k) * 8);
         g.stroke();
       }
-      text(g, 'みなと湯', 180, 110, 74, '#fff');
+      text(g, strange ? 'みみの湯' : 'みなと湯', 180, 110, 74, '#fff'); // 異変では名前が変わる
       text(g, '朝6時から営業', 180, 200, 30, '#e9f4ff');
       text(g, '駅から徒歩3分', 180, 245, 30, '#e9f4ff');
       break;
@@ -232,7 +235,7 @@ export function posterTexture(kind: PosterKind, strange = false): THREE.CanvasTe
       text(g, 'ひかり眼科', 180, 70, 54, '#2b5f4a');
       text(g, strange ? '見えていますか' : '見えにくさ、', 180, 320, 34, '#333');
       text(g, strange ? 'ほんとうに' : 'ありませんか', 180, 368, 34, '#333');
-      text(g, '予約 03-0000-0000', 180, 467, 24, '#fff', 'normal');
+      text(g, phone ? '予約 03-1133-315' : '予約 03-0000-0000', 180, 467, 24, '#fff', 'normal');
       break;
     }
     case 'books': {
@@ -252,13 +255,38 @@ export function posterTexture(kind: PosterKind, strange = false): THREE.CanvasTe
       g.fillStyle = '#ffffff'; g.fillRect(0, 0, 360, 504);
       g.strokeStyle = '#d33'; g.lineWidth = 14;
       g.beginPath(); g.arc(180, 200, 110, 0, Math.PI * 2); g.stroke();
-      // 走る人のピクト
+      // 走る人のピクト（異変: 頭が首から離れて白い目が付き、後ろの腕の先が鉤爪の指になる）
       g.fillStyle = '#222';
-      g.beginPath(); g.arc(195, 130, 18, 0, Math.PI * 2); g.fill();
-      g.lineWidth = 16; g.strokeStyle = '#222'; g.lineCap = 'round';
+      g.lineWidth = 16; g.strokeStyle = '#222'; g.lineCap = 'round'; g.lineJoin = 'round';
+      if (strange) {
+        g.beginPath(); g.arc(166, 112, 21, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#fff';
+        g.beginPath(); g.arc(158, 118, 4, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(174, 108, 4, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#222';
+        g.lineCap = 'butt';
+        g.beginPath(); g.moveTo(187, 146); g.lineTo(185, 155); g.stroke(); // 首の切り口
+        g.lineCap = 'round';
+      } else {
+        g.beginPath(); g.arc(195, 130, 18, 0, Math.PI * 2); g.fill();
+      }
       g.beginPath(); g.moveTo(185, 155); g.lineTo(170, 220); g.lineTo(130, 270); g.stroke();
       g.beginPath(); g.moveTo(170, 220); g.lineTo(215, 255); g.lineTo(205, 290); g.stroke();
-      g.beginPath(); g.moveTo(140, 180); g.lineTo(185, 165); g.lineTo(225, 195); g.stroke();
+      if (strange) {
+        // 後ろの腕はだらりと下がり、手首から細く曲がった指が4本
+        g.beginPath(); g.moveTo(185, 165); g.lineTo(225, 195); g.stroke();
+        g.beginPath(); g.moveTo(185, 165); g.lineTo(148, 196); g.lineTo(128, 214); g.stroke();
+        g.lineWidth = 3.5;
+        for (const [dx, len, bend] of [[-9, 30, 0.5], [-3, 34, 0.6], [3, 31, 0.7], [9, 22, 0.9]]) {
+          g.beginPath();
+          g.moveTo(128 + dx * 0.6, 216);
+          g.quadraticCurveTo(122 + dx, 216 + len * 0.6, 126 + dx + len * bend * 0.35, 216 + len);
+          g.stroke();
+        }
+        g.lineWidth = 16;
+      } else {
+        g.beginPath(); g.moveTo(140, 180); g.lineTo(185, 165); g.lineTo(225, 195); g.stroke();
+      }
       g.strokeStyle = '#d33'; g.lineWidth = 14;
       g.beginPath(); g.moveTo(102, 122); g.lineTo(258, 278); g.stroke();
       text(g, '通路では', 180, 380, 38, '#222');

@@ -31,7 +31,7 @@ export interface Anomaly {
 }
 
 const posterCache = new Map<string, THREE.Texture>();
-function poster(kind: T.PosterKind, strange: boolean) {
+function poster(kind: T.PosterKind, strange: boolean | 'phone') {
   const key = kind + strange;
   if (!posterCache.has(key)) posterCache.set(key, T.posterTexture(kind, strange));
   return posterCache.get(key)!;
@@ -146,6 +146,27 @@ export const ANOMALIES: Anomaly[] = [
       }
       // 停電から少し遅れて非常灯が点く
       if (mem.dark) w.lighting.emergency = Math.min(1, Math.max(0, (mem.t - 1.9) / 0.4));
+    },
+  },
+  {
+    id: 'poster_phone', name: '眼科のポスターの電話番号が「03-1133-315」になっている', category: 'A',
+    apply(w) {
+      const p = w.posters.find((q) => q.kind === 'eye')!;
+      (p.mesh.material as THREE.MeshStandardMaterial).map = poster('eye', 'phone');
+    },
+  },
+  {
+    id: 'poster_bath', name: '銭湯のポスターの「みなと湯」が「みみの湯」になっている', category: 'A',
+    apply(w) {
+      const p = w.posters.find((q) => q.kind === 'bath')!;
+      (p.mesh.material as THREE.MeshStandardMaterial).map = poster('bath', true);
+    },
+  },
+  {
+    id: 'poster_manner', name: 'マナーポスターの人の頭が外れ、手が鉤爪になっている', category: 'A',
+    apply(w) {
+      const p = w.posters.find((q) => q.kind === 'manner')!;
+      (p.mesh.material as THREE.MeshStandardMaterial).map = poster('manner', true);
     },
   },
   {
