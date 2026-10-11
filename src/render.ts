@@ -122,6 +122,20 @@ export class Renderer {
     this.gtao.updateGtaoMaterial({ radius: 0.32, distanceExponent: 1.6, thickness: 0.9, scale: 1.0, samples: 16 });
     this.gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
     this.gtao.blendIntensity = 0.7;
+    // 吹き出し（Sprite）は AO の深度・法線に入れない（入れると板の形の四角い陰りが出る）
+    const ao = this.gtao as unknown as { _overrideVisibility(): void; _restoreVisibility(): void };
+    const override = ao._overrideVisibility.bind(ao), restore = ao._restoreVisibility.bind(ao);
+    const hiddenSprites: THREE.Object3D[] = [];
+    ao._overrideVisibility = () => {
+      override();
+      scene.traverseVisible((o) => { if ((o as THREE.Sprite).isSprite) hiddenSprites.push(o); });
+      hiddenSprites.forEach((o) => { o.visible = false; });
+    };
+    ao._restoreVisibility = () => {
+      restore();
+      hiddenSprites.forEach((o) => { o.visible = true; });
+      hiddenSprites.length = 0;
+    };
     this.composer.addPass(this.gtao);
     // Bloom は蛍光灯のまわりのにじみだけ（レンズの散乱程度）。広いもやは出さない
     this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.03, 0, 2.0);

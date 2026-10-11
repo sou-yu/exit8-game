@@ -31,12 +31,13 @@ iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと�
 | `src/lighting.ts` | 蛍光灯（面光源と影付きライトの割り当て、個体差、非常灯） |
 | `src/render.ts` | 後処理と画質プリセット、負荷の計測 |
 | `src/man.ts` | 通行人（人物モデル `src/assets/man.glb` の読み込み、歩行と待機の切り替え、笑顔） |
+| `src/granny.ts` | 異変「振り向くとおばあさん」のモデル（`src/assets/granny.glb`）と吹き出し |
 | `src/leak.ts` | 異変「換気口から赤い液体」の筋・しずく・水たまり |
 | `src/anomalies.ts` | 異変の一覧と、通常状態に戻す処理 |
 | `src/textures.ts` | 看板・広告などの絵（すべてプログラムで描画） |
 | `src/audio.ts` | 空調音・足音などの効果音（WebAudioで合成） |
 
-## 異変（15種類）
+## 異変（16種類）
 
 | ID | 内容 | 分類 |
 | --- | --- | --- |
@@ -52,6 +53,7 @@ iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと�
 | ceiling_low | 天井が低い | C 空間 |
 | man_smile | 通行人が満面の笑み | B 人物 |
 | man_stare | 通行人が立ち止まって見つめてくる | B 人物 |
+| granny_behind | 前を向いて進む間は何も起きないが、振り向くとすぐ後ろにお盆を持ったおばあさんがこちらを見て立っていて、吹き出しで「お箸捨ててね」と話しかけてくる。目をそらすとまた真後ろへ回り込むので、何度振り向いても同じ（判定通路の中だけ。通り抜けはできない） | B 人物 |
 | blackout | 途中で停電する | D ホラー |
 | shadow | 奥に黒い人影（近づくと消える） | D ホラー |
 | vent_blood | 換気口から赤い液体が壁を伝って垂れ、床に水たまり。しずくが落ちる音がする | D ホラー |
@@ -76,7 +78,7 @@ iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと�
 
 ## 描画（実写に近づけるための作り）
 
-通行人の人物モデル（下の「通行人のモデル」）以外は外部素材を使っていない（模様・看板はすべてプログラムで生成）。
+通行人とおばあさんの人物モデル（下の「通行人のモデル」「おばあさんのモデル」）以外は外部素材を使っていない（模様・看板はすべてプログラムで生成）。
 Three.js r186。変更前の画面を同じ視点で撮り、CGらしく見える原因ごとに直した。
 
 | 変更前の原因 | 対策 |
@@ -132,4 +134,19 @@ node tools/man/extract-images.cjs office_man_rigged.glb img/n
 node tools/man/extract-images.cjs office_man_smile.glb img/s
 python tools/man/textures.py img jpg
 node tools/man/optimize.mjs office_man_rigged.glb src/assets/man.glb jpg
+```
+
+## おばあさんのモデル
+
+異変 granny_behind のおばあさん（白い割烹着と三角巾、うどんの丼をお盆で運んでいる）。8方向の画像（`udon_granny_turnaround`）から作ったモデルを、ゲーム用に `src/assets/granny.glb`（約0.7MB）にしてビルド時に HTML へ埋め込んでいる。
+
+- 身長 1.55m、約9,700三角形。体は画像から焼き込んだテクスチャ1枚、お盆・丼・うどん・ねぎは色だけの模型
+- 骨は 6本（root・hips・spine・chest・neck・head）。腕とお盆は胸と一緒に動く。待機（Idle、4秒ループ）だけで歩かない
+- 正面から見たときがいちばん元の画像に近い。この異変ではいつもプレイヤーのほうを向いて立つ
+- 吹き出しは画面のほうを向く板（Sprite）。AO の深度に入れると四角い陰りが出るので、`src/render.ts` で AO の計算から外している
+
+元のモデル（`udon_granny.glb`）からの軽量化は `tools/granny/optimize.mjs`（量子化と meshopt 圧縮。形は変えない）。上と同じ作業用フォルダで:
+
+```
+node tools/granny/optimize.mjs udon_granny.glb src/assets/granny.glb
 ```

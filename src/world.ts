@@ -13,6 +13,7 @@ import { buildLeak, type Leak } from './leak';
 export { W, H, LS, LM, S_CENTER, FORWARD_SHIFT, canStand } from './layout';
 export type { Lamp } from './lighting';
 export type { Man } from './man';
+import type { Granny } from './granny';
 
 export interface World {
   group: THREE.Group;
@@ -36,6 +37,8 @@ export interface World {
   shadow: THREE.Group;
   /** 換気口から赤い液体が垂れる異変の小道具（普段は非表示） */
   leak: Leak;
+  /** 振り向くとすぐ後ろに立っているおばあさん（異変、普段は非表示） */
+  granny: Granny;
 }
 
 /** 壁の向き: 法線 (nx, nz) を向く物を (x, y, z) に置く */
@@ -100,7 +103,7 @@ function wallProps(): WallProp[] {
   return p;
 }
 
-export function buildWorld(man: Man): World {
+export function buildWorld(man: Man, granny: Granny): World {
   const group = new THREE.Group();
 
   // ================= 外殻 =================
@@ -475,9 +478,10 @@ export function buildWorld(man: Man): World {
   group.add(man.group);
   const shadow = buildShadow();
   group.add(shadow);
+  group.add(granny.group);
 
   return {
     group, lighting, lamps: lighting.lamps, envLevel: 1, mStripeMat, mCeiling, mHeaders, hangingSign, hangingBaseY,
-    posters, door, doorVoid, signs, man, shadow, leak, hangingScrawl,
+    posters, door, doorVoid, signs, man, shadow, leak, hangingScrawl, granny,
   };
 }

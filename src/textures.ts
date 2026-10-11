@@ -353,3 +353,28 @@ export function grilleTexture(): THREE.CanvasTexture {
   }
   return toTexture(c);
 }
+
+/** 吹き出し（白地に黒い縁、左下に尾）。異変「振り向くとおばあさんが立っている」で使う */
+export function bubbleTexture(s: string): THREE.CanvasTexture {
+  const w = 768, h = 320;
+  const [c, g] = canvas(w, h);
+  const x0 = 12, y0 = 12, x1 = w - 12, y1 = 236, r = 70;
+  g.beginPath();
+  g.moveTo(x0 + r, y0);
+  g.arcTo(x1, y0, x1, y1, r);
+  g.arcTo(x1, y1, x0, y1, r);
+  g.lineTo(250, y1);
+  g.lineTo(150, h - 12); // 尾（話している人の頭のほうへ）
+  g.lineTo(185, y1);
+  g.arcTo(x0, y1, x0, y0, r);
+  g.arcTo(x0, y0, x1, y0, r);
+  g.closePath();
+  g.fillStyle = '#fbfaf6';
+  g.fill();
+  g.lineWidth = 9;
+  g.lineJoin = 'round';
+  g.strokeStyle = '#2a2826';
+  g.stroke();
+  text(g, s, (x0 + x1) / 2, (y0 + y1) / 2 + 4, 104, '#1d1b1a', 'bold');
+  return toTexture(c);
+}

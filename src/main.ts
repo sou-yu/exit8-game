@@ -6,6 +6,7 @@ import { numberSignTexture } from './textures';
 import { Sound } from './audio';
 import { TouchControls, isTouchDevice } from './touch';
 import { loadMan, WALK_SPEED } from './man';
+import { loadGranny } from './granny';
 
 const GOAL = 8;
 const ANOMALY_RATE = 0.6;
@@ -95,6 +96,7 @@ let pendingSign: { mesh: THREE.Mesh; n: number } | null = null;
 const frustum = new THREE.Frustum();
 const projScreen = new THREE.Matrix4();
 const signBox = new THREE.Box3();
+const viewSphere = new THREE.Sphere();
 function updatePendingSign() {
   if (!pendingSign) return;
   camera.updateMatrixWorld();
@@ -265,8 +267,8 @@ function updatePlayer(dt: number) {
   const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
   const mx = (-sin * vel.f + cos * vel.s) * dt;
   const mz = (-cos * vel.f - sin * vel.s) * dt;
-  if (canStand(player.x + mx, player.z, RADIUS)) player.x += mx;
-  if (canStand(player.x, player.z + mz, RADIUS)) player.z += mz;
+  if (canStand(player.x + mx, player.z, RADIUS) && !hitsGranny(player.x + mx, player.z)) player.x += mx;
+  if (canStand(player.x, player.z + mz, RADIUS) && !hitsGranny(player.x, player.z + mz)) player.z += mz;
   const moved = Math.hypot(mx, mz);
   player.bob += (moved * Math.PI * 2) / 1.5; // 1.5m で左右1歩ずつ
   player.stepAcc += moved;
@@ -289,6 +291,15 @@ function updatePlayer(dt: number) {
     player.x += FORWARD_SHIFT.x;
     player.z += FORWARD_SHIFT.y;
   }
+}
+
+/** 異変のおばあさんは通り抜けられない（よけて進む） */
+function hitsGranny(x: number, z: number) {
+  const g = world.granny.group;
+  if (!g.visible) return false;
+  const d = Math.hypot(x - g.position.x, z - g.position.z);
+  // すでに重なっているときは、離れる向きの移動だけ通す
+  return d < RADIUS + 0.25 && d < Math.hypot(player.x - g.position.x, player.z - g.position.z);
 }
 
 function carrySign(shown: number) {
@@ -346,11 +357,6 @@ function frame() {
     updatePlayer(dt);
     if (game.enteredM) game.tInM += dt;
     updateMan(dt);
-    const a = game.anomalyId ? ANOMALY_BY_ID.get(game.anomalyId) : null;
-    a?.update?.({
-      world, dt, px: player.x, pz: player.z, tInM: game.tInM, man,
-      sound: (n, vol) => (n === 'thud' ? sound.thud() : n === 'drip' ? sound.drip(vol) : sound.flicker()),
-    }, game.mem);
     hint.textContent = game.currentLevel === 0 && !game.enteredM && time < 30
       ? '番号の看板を確かめて、先の通路へ。いつもと違えば引き返す。' : '';
   }
@@ -362,6 +368,18 @@ function frame() {
   camRight.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
   camera.position.set(player.x + camRight.x * bobX, EYE + bobY, player.z + camRight.z * bobX);
   camera.rotation.set(player.pitch, player.yaw, 0);
+  if (game.gameState === 'playing') {
+    // 異変の動き（カメラを動かした後に行う。画面に入っているかを今のカメラで判定するため）
+    camera.updateMatrixWorld();
+    projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    frustum.setFromProjectionMatrix(projScreen);
+    const a = game.anomalyId ? ANOMALY_BY_ID.get(game.anomalyId) : null;
+    a?.update?.({
+      world, dt, px: player.x, pz: player.z, tInM: game.tInM, man,
+      sound: (n, vol) => (n === 'thud' ? sound.thud() : n === 'drip' ? sound.drip(vol) : sound.flicker()),
+      inView: (c, r) => frustum.intersectsSphere(viewSphere.set(c, r)),
+    }, game.mem);
+  }
   world.lighting.update(camera.position);
   updatePendingSign();
   if (DEBUG) {
@@ -390,9 +408,10 @@ async function init() {
   setStatus('通行人を読み込んでいます');
   await nextPaint();
   const manModel = await loadMan();
+  const grannyModel = await loadGranny();
   setStatus('通路を組み立てています');
   await nextPaint();
-  world = buildWorld(manModel);
+  world = buildWorld(manModel, grannyModel);
   scene.add(world.group);
   renderer.attach(world.lighting);
   if (params.has('q')) {
@@ -414,13 +433,19 @@ async function init() {
   world.man.group.visible = true;
   world.leak.group.visible = true; // 異変の小道具も同じ
   world.hangingScrawl.visible = true;
+  world.granny.group.visible = true;
+  world.granny.bubble.visible = true;
+  world.granny.setCastShadow(true);
   renderer.gl.initTexture(world.man.smileTex);
   await renderer.precompile();
-  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.hangingScrawl]);
+  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.hangingScrawl, world.granny.group]);
   await renderer.precompile();
   warmUpMan();
   world.leak.group.visible = false;
   world.hangingScrawl.visible = false;
+  world.granny.group.visible = false;
+  world.granny.bubble.visible = false;
+  world.granny.setCastShadow(false);
   clearTimeout(slow);
   setStatus('');
   startBtn.disabled = false;
@@ -430,11 +455,12 @@ async function init() {
   exposeForTests();
 }
 
-/** 影と AO で使うシェーダーは実際に描くまで作られないので、通行人を目の前に置いて 1 枚描いておく */
+/** 影と AO で使うシェーダーは実際に描くまで作られないので、通行人とおばあさんを目の前に置いて 1 枚描いておく */
 function warmUpMan() {
   const g = world.man.group;
   g.visible = true;
   g.position.set(player.x + 2.5, 0, player.z); // 開始時は +x の向きを見ている
+  world.granny.group.position.set(player.x + 2.2, 0, player.z + 0.8); // 異変のおばあさんも同じ（吹き出しごと）
   camera.position.set(player.x, EYE, player.z);
   camera.rotation.set(0, player.yaw, 0);
   world.lighting.update(camera.position);

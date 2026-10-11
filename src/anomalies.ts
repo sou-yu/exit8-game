@@ -12,6 +12,8 @@ export interface Ctx {
   tInM: number;
   man: ManState;
   sound: (name: 'thud' | 'flicker' | 'drip', vol?: number) => void;
+  /** 球（中心・半径）が今の画面に少しでも入っているか */
+  inView: (center: THREE.Vector3, radius: number) => boolean;
 }
 
 export interface ManState {
@@ -71,9 +73,20 @@ export function resetWorld(w: World, man: ManState) {
   w.shadow.visible = false;
   w.leak.group.visible = false;
   w.hangingScrawl.visible = false;
+  w.granny.group.visible = false;
+  w.granny.bubble.visible = false;
+  w.granny.setCastShadow(false);
   man.speed = WALK_SPEED;
   man.stare = false;
 }
+
+/** おばあさんが立つ位置: プレイヤーの真後ろ（来た方向、+z）にこの距離 */
+const GRANNY_BEHIND = 1.25;
+/** おばあさんの体と吹き出しを包む球（足もとからの高さと半径）。回り込むときは、この球が画面の外にあること */
+const GRANNY_SPHERE_Y = 0.95, GRANNY_SPHERE_R = 1.0;
+/** 「見た」とみなす球（体の中心あたり）。画面の端にかすっただけでは数えない */
+const GRANNY_SEEN_R = 0.5;
+const grannyAt = new THREE.Vector3();
 
 export const ANOMALIES: Anomaly[] = [
   {
@@ -180,6 +193,54 @@ export const ANOMALIES: Anomaly[] = [
       const d = ctx.world.leak.update(ctx.dt, ctx.px, ctx.pz);
       // しずくの落ちる音（近いほど大きい）
       if (d !== null && d < 14) ctx.sound('drip', Math.min(1, 2.5 / Math.max(1, d)));
+    },
+  },
+  {
+    // 前を向いて進んでいる間は見えない。振り向くと、すぐ後ろでこちらを見て立っていて、吹き出しで話しかけてくる。
+    // 目をそらすとまた真後ろへ回り込むので、何度振り向いても同じように立っている
+    id: 'granny_behind', name: '振り向くと、すぐ後ろにおばあさんが立っていて「お箸捨ててね」と話しかけてくる', category: 'B',
+    apply() {},
+    update(ctx, mem) {
+      const g = ctx.world.granny;
+      const grp = g.group;
+      const seen = () => ctx.inView(grannyAt.set(grp.position.x, GRANNY_SPHERE_Y, grp.position.z), GRANNY_SEEN_R);
+      const maybeSeen = () => ctx.inView(grannyAt.set(grp.position.x, GRANNY_SPHERE_Y, grp.position.z), GRANNY_SPHERE_R);
+      if (mem.shown && !(grp.visible && seen())) {
+        // 目をそらした
+        mem.shown = 0;
+        g.bubble.visible = false;
+        g.setCastShadow(false); // 後ろについている間は、影が前に落ちて見えないようにする
+      }
+      if (!mem.shown) {
+        // 判定通路の中だけ。真後ろの位置が画面の外にあるうちに、そこへ回り込む
+        const tx = THREE.MathUtils.clamp(ctx.px, LS - W + 0.45, LS - 0.45);
+        const tz = ctx.pz + GRANNY_BEHIND;
+        const inside = ctx.tInM >= 0 && ctx.pz < -3 && tz < -1.6;
+        if (inside && !ctx.inView(grannyAt.set(tx, GRANNY_SPHERE_Y, tz), GRANNY_SPHERE_R)) {
+          grp.position.set(tx, 0, tz);
+          grp.visible = true;
+        } else if (!inside && grp.visible && !maybeSeen()) {
+          grp.visible = false;
+        }
+        if (grp.visible && seen()) {
+          // 振り向いた
+          mem.shown = 1;
+          mem.t = 0;
+          g.setCastShadow(true);
+        }
+      }
+      if (!grp.visible) return;
+      // いつもこちらを見ている
+      grp.rotation.y = Math.atan2(ctx.px - grp.position.x, ctx.pz - grp.position.z);
+      if (mem.shown) {
+        // 少し間をおいて吹き出しが出る
+        mem.t += ctx.dt;
+        const k = THREE.MathUtils.clamp((mem.t - 0.35) / 0.15, 0, 1);
+        g.bubble.visible = k > 0;
+        g.bubble.scale.set(0.6 * (0.6 + 0.4 * k), 0.25 * (0.6 + 0.4 * k), 1);
+        g.bubble.material.opacity = k;
+      }
+      g.mixer.update(ctx.dt);
     },
   },
   {
