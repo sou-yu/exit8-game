@@ -110,7 +110,8 @@ function updatePendingSign() {
 }
 
 function pickAnomaly(): string | null {
-  if (game.currentLevel === 0 || game.currentLevel >= GOAL) return null;
+  // 0番は必ず異変なし。8番（出口の通路）も 1〜7番と同じ確率で異変が出る
+  if (game.currentLevel === 0 || game.currentLevel > GOAL) return null;
   if (FORCE && ANOMALY_BY_ID.has(FORCE)) return FORCE;
   if (Math.random() >= ANOMALY_RATE) return null;
   // 直近2回の異変は除外し、未発見の異変を優先する
@@ -132,7 +133,8 @@ function generateCorridor() {
     ANOMALY_BY_ID.get(game.anomalyId)!.apply(world, man);
     game.recent = [game.anomalyId, ...game.recent].slice(0, 2);
   }
-  if (game.currentLevel >= GOAL) setHangingSign(world, 'goal');
+  // 8番の出口案内は「地上へ」。矢印の異変ならその矢印を逆向きにする
+  if (game.currentLevel >= GOAL) setHangingSign(world, game.anomalyId === 'sign_arrow' ? 'goalReversed' : 'goal');
   const s = world.signs;
   [s.aEast, s.aWest, s.bEast, s.bWest].forEach((m) => setSign(m, game.currentLevel));
   man.z = -LM + 1;
@@ -150,20 +152,17 @@ function onEnterM() {
   pendingSign = null;
   game.tInM = 0;
   const next = game.currentLevel + 1;
-  setSign(world.signs.aWest, game.hasAnomaly ? next : 0);
+  setSign(world.signs.aWest, game.hasAnomaly ? Math.min(next, GOAL) : 0);
   setSign(world.signs.bEast, game.hasAnomaly ? 0 : Math.min(next, GOAL));
 }
 
 function judge(turnedBack: boolean) {
   game.playerDecision = turnedBack ? 'back' : 'forward';
-  if (game.currentLevel >= GOAL) {
-    if (!turnedBack) return gameClear();
-    game.currentLevel = 0;
-  } else {
-    const correct = game.hasAnomaly === turnedBack;
-    if (correct && game.anomalyId) game.found.add(game.anomalyId);
-    game.currentLevel = correct ? game.currentLevel + 1 : 0;
-  }
+  const correct = game.hasAnomaly === turnedBack;
+  if (correct && game.anomalyId) game.found.add(game.anomalyId);
+  // 8番（出口の通路）で正しく判断すれば地上へ出られる: 異変がなければ進む、異変があれば引き返す
+  if (game.currentLevel >= GOAL && correct) return gameClear();
+  game.currentLevel = correct ? game.currentLevel + 1 : 0;
   generateCorridor();
 }
 

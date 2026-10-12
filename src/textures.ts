@@ -97,15 +97,16 @@ export function numberSignTexture(n: number): THREE.CanvasTexture {
 }
 
 /** 通路の天井から下がる出口案内 */
-export function hangingSignTexture(mode: 'normal' | 'reversed' | 'goal'): THREE.CanvasTexture {
+export function hangingSignTexture(mode: 'normal' | 'reversed' | 'goal' | 'goalReversed'): THREE.CanvasTexture {
+  const goal = mode === 'goal' || mode === 'goalReversed';
   const [c, g] = canvas(1024, 192);
-  g.fillStyle = mode === 'goal' ? '#f2f2f2' : '#1d5c48';
+  g.fillStyle = goal ? '#f2f2f2' : '#1d5c48';
   g.fillRect(0, 0, 1024, 192);
-  const fg = mode === 'goal' ? '#1d5c48' : '#f4f4f0';
+  const fg = goal ? '#1d5c48' : '#f4f4f0';
   // 矢印
   g.save();
   g.translate(150, 96);
-  if (mode === 'reversed') g.rotate(Math.PI);
+  if (mode === 'reversed' || mode === 'goalReversed') g.rotate(Math.PI);
   g.fillStyle = fg;
   g.beginPath();
   g.moveTo(0, -62); g.lineTo(48, -6); g.lineTo(18, -6); g.lineTo(18, 60);
@@ -115,7 +116,7 @@ export function hangingSignTexture(mode: 'normal' | 'reversed' | 'goal'): THREE.
   g.restore();
   text(g, '8番出口', 470, 80, 76, fg);
   text(g, 'EXIT 8', 470, 148, 36, fg, 'normal');
-  text(g, mode === 'goal' ? '地上へ' : '改札・地上', 820, 96, 46, fg);
+  text(g, goal ? '地上へ' : '改札・地上', 820, 96, 46, fg);
   return toTexture(c);
 }
 

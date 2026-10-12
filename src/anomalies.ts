@@ -42,6 +42,7 @@ const hangTex = {
   normal: T.hangingSignTexture('normal'),
   reversed: T.hangingSignTexture('reversed'),
   goal: T.hangingSignTexture('goal'),
+  goalReversed: T.hangingSignTexture('goalReversed'),
 };
 
 export function setHangingSign(w: World, mode: keyof typeof hangTex) {
