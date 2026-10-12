@@ -68,7 +68,7 @@ export function resetWorld(w: World, man: ManState) {
   w.lighting.emergency = 0;
   w.envLevel = 1;
   w.door.rotation.y = 0;
-  w.mStripeMat.color.setHex(0x2a7d63);
+  w.tracks.group.visible = false;
   w.mCeiling.position.y = 0;
   w.mHeaders.forEach((h) => (h.visible = false));
   w.hangingSign.position.y = w.hangingBaseY;
@@ -117,8 +117,8 @@ export const ANOMALIES: Anomaly[] = [
     },
   },
   {
-    id: 'stripe_red', name: '壁の帯が赤くなっている', category: 'A',
-    apply(w) { w.mStripeMat.color.setHex(0x9e1d1d); },
+    id: 'penguin_tracks', name: '通路の床一面に、ペンギンの濡れた足跡がたくさん続いている', category: 'A',
+    apply(w) { w.tracks.group.visible = true; },
   },
   {
     // ドアの前まで来て、すき間の奥の暗がりを覗き込むと、男性の低いうめき声が聞こえる。覗き込んでいる間は間をおいて繰り返す

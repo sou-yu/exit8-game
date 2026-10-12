@@ -9,6 +9,7 @@ import { Geo, PROFILES, cornerGuards, expansionJoint, extrude, mRange, roomPlane
 import { Lighting, type Lamp } from './lighting';
 import { buildShadow, type Man } from './man';
 import { buildLeak, type Leak } from './leak';
+import { buildTracks, type Tracks } from './tracks';
 
 export { W, H, LS, LM, S_CENTER, FORWARD_SHIFT, canStand } from './layout';
 export type { Lamp } from './lighting';
@@ -21,7 +22,6 @@ export interface World {
   lamps: Lamp[];
   /** 環境光（IBL）の強さ 0..1（停電で下げる） */
   envLevel: number;
-  mStripeMat: THREE.MeshStandardMaterial;
   /** 判定通路の天井（器具以外の天井の物を含む）。天井が下がる異変で y を動かす */
   mCeiling: THREE.Group;
   mHeaders: THREE.Mesh[];
@@ -37,6 +37,7 @@ export interface World {
   shadow: THREE.Group;
   /** 換気口から赤い液体が垂れる異変の小道具（普段は非表示） */
   leak: Leak;
+  tracks: Tracks;
   /** 振り向くとすぐ後ろに立っているおばあさん（異変、普段は非表示） */
   granny: Granny;
 }
@@ -116,7 +117,6 @@ export function buildWorld(man: Man, granny: Granny): World {
   const tileMat = macro(new THREE.MeshStandardMaterial({ ...scaled(P.wallTile(), 1, 0.9, 0.1), roughness: 1 }), wallAtlas.tex, 'tile');
   const bandSet = scaled(P.bandTile(), 1, 0.118, 0.996);
   const stripeMat = macro(new THREE.MeshStandardMaterial({ ...bandSet, color: 0x2a7d63, roughness: 1 }), wallAtlas.tex, 'band');
-  const mStripeMat = macro(new THREE.MeshStandardMaterial({ ...bandSet, color: 0x2a7d63, roughness: 1 }), wallAtlas.tex, 'band');
   const skirtMat = macro(new THREE.MeshStandardMaterial({ ...scaled(P.skirting(), 1, 0.1), roughness: 1 }), wallAtlas.tex, 'skirt');
   const alu = P.satinAluminium();
   const corniceMat = macro(new THREE.MeshStandardMaterial({ ...scaled(alu, 0.2, 0.2), roughness: 1, metalness: 1 }), wallAtlas.tex, 'cornice');
@@ -150,7 +150,7 @@ export function buildWorld(man: Man, granny: Granny): World {
   shellMesh(gPaint, paintMat);
   shellMesh(gCornice, corniceMat);
   shellMesh(gBand, stripeMat);
-  shellMesh(gBandM, mStripeMat);
+  shellMesh(gBandM, stripeMat);
 
   // シャッター（後方通路の突き当たり）
   const sh = WALLS[WALLS.length - 1];
@@ -474,6 +474,8 @@ export function buildWorld(man: Man, granny: Granny): World {
 
   const leak = buildLeak(LS, VENT_Z[0]);
   group.add(leak.group);
+  const tracks = buildTracks(LS - W, LS, 0, -LM);
+  group.add(tracks.group);
 
   group.add(man.group);
   const shadow = buildShadow();
@@ -481,7 +483,7 @@ export function buildWorld(man: Man, granny: Granny): World {
   group.add(granny.group);
 
   return {
-    group, lighting, lamps: lighting.lamps, envLevel: 1, mStripeMat, mCeiling, mHeaders, hangingSign, hangingBaseY,
-    posters, door, doorVoid, signs, man, shadow, leak, hangingScrawl, granny,
+    group, lighting, lamps: lighting.lamps, envLevel: 1, mCeiling, mHeaders, hangingSign, hangingBaseY,
+    posters, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny,
   };
 }

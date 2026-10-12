@@ -433,6 +433,7 @@ async function init() {
   // 通行人は最初は隠れているので、シェーダーを作る間だけ見せておく（初めて現れたときに止まらないように）
   world.man.group.visible = true;
   world.leak.group.visible = true; // 異変の小道具も同じ
+  world.tracks.group.visible = true;
   world.hangingScrawl.visible = true;
   world.shadow.visible = true;
   world.granny.group.visible = true;
@@ -440,10 +441,11 @@ async function init() {
   world.granny.setCastShadow(true);
   renderer.gl.initTexture(world.man.smileTex);
   await renderer.precompile();
-  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.hangingScrawl, world.granny.group]);
+  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.tracks.group, world.hangingScrawl, world.granny.group]);
   await renderer.precompile();
   warmUpMan();
   world.leak.group.visible = false;
+  world.tracks.group.visible = false;
   world.hangingScrawl.visible = false;
   world.shadow.visible = false;
   world.granny.group.visible = false;
