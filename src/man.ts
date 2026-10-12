@@ -13,9 +13,9 @@ import manGlb from './assets/man.glb?inline';
 
 /**
  * 歩行アニメーションをそのままの速さで再生したときの歩く速さ（m/秒）。
- * 着いている足が 1 秒あたり約 1.02 m 後ろへ動く（ゲーム内で測った値）ので、この速さで進めば足が床で滑らない。
+ * 着いている足が 1 秒あたり約 0.7 m 後ろへ動く（測った値）ので、この速さで進めば足が床で滑らない。
  */
-export const WALK_SPEED = 1.02;
+export const WALK_SPEED = 0.71;
 
 export interface Man {
   /** 足もとが原点で、+z が正面 */

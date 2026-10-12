@@ -148,6 +148,42 @@ for (const mesh of root.listMeshes()) {
 }
 console.log('weights', stats);
 
+// ---- 手の左右 ----
+// 元の手は左右が逆の形（親指が体の内側）だったので、手首の中心を通る面で手を鏡に映す。
+// 手に持ったスマホと鞄も同じ面で映して、握り方を合わせる。手首の境目は袖口の中に隠れる
+const WRIST_X = 0.3318;
+let mirrored = 0;
+for (const mesh of root.listMeshes()) {
+  const name = mesh.getName();
+  const whole = name === 'Cube' || name === 'Cube.017'; // 鞄・スマホ
+  if (!whole && name !== 'Shirt_body') continue;
+  for (const prim of mesh.listPrimitives()) {
+    const pos = prim.getAttribute('POSITION'), nrm = prim.getAttribute('NORMAL'), jo = prim.getAttribute('JOINTS_0'), we = prim.getAttribute('WEIGHTS_0');
+    const n = pos.getCount(), flip = new Uint8Array(n);
+    const p = [0, 0, 0], q = [0, 0, 0], jj = [0, 0, 0, 0], ww = [0, 0, 0, 0];
+    for (let i = 0; i < n; i++) {
+      if (!whole) {
+        jo.getElement(i, jj); we.getElement(i, ww);
+        let best = 0;
+        for (let k = 1; k < 4; k++) if (ww[k] > ww[best]) best = k;
+        if (!/^(Hand|Finger)/.test(joints[jj[best]].getName())) continue;
+      }
+      pos.getElement(i, p);
+      const c = Math.sign(p[0]) * WRIST_X;
+      pos.setElement(i, [2 * c - p[0], p[1], p[2]]);
+      nrm.getElement(i, q); nrm.setElement(i, [-q[0], q[1], q[2]]);
+      flip[i] = 1; mirrored++;
+    }
+    // 映した三角形は裏返るので、頂点の順を入れ替える
+    const idx = prim.getIndices(), a = idx.getArray();
+    for (let t = 0; t < a.length; t += 3) {
+      if (flip[a[t]] + flip[a[t + 1]] + flip[a[t + 2]] >= 2) { const x = a[t + 1]; a[t + 1] = a[t + 2]; a[t + 2] = x; }
+    }
+    idx.setArray(a);
+  }
+}
+console.log('mirrored vertices', mirrored);
+
 // ---- アニメーション ----
 // 骨はすべてモデルの軸にそろえたので、回転はモデルの軸（x: 左、y: 上、z: 前）で書ける
 const AXIS = { x: new Vector3(1, 0, 0), y: new Vector3(0, 1, 0), z: new Vector3(0, 0, 1) };
@@ -172,9 +208,9 @@ const LMAX = (L1 + L2) * 0.985;   // 着いている脚の伸ばしきらない�
 const HEEL = P['Foot.L'][2] - (-0.084);       // 足首からかかとまで（前後）
 const BALL = P['Toe.L'][2] - P['Foot.L'][2];   // 足首から指の付け根まで
 const FPS = 30;
-const T = 1.0;        // 2 歩で 1 秒
+const T = 1.2;        // 2 歩で 1.2 秒
 const STANCE = 0.6;   // 周期のうち足が床に着いている割合
-const S = 0.56;       // 1 歩の歩幅（着いている足が後ろへ動く距離）
+const S = 0.47;       // 1 歩の歩幅（着いている足が後ろへ動く距離）
 const LIFT = 0.07;
 const WALK_SPEED = S / (STANCE * T);
 console.log({ L1, L2, A1: A1 / deg, A2: A2 / deg, HIP_H, LMAX, HEEL, BALL, WALK_SPEED });
