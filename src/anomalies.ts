@@ -11,7 +11,9 @@ export interface Ctx {
   /** 判定通路に入ってからの経過時間（入っていなければ -1） */
   tInM: number;
   man: ManState;
-  sound: (name: 'thud' | 'flicker' | 'drip', vol?: number) => void;
+  sound: (name: 'thud' | 'flicker' | 'drip' | 'moan', vol?: number, pan?: number) => void;
+  /** カメラの向き（長さ 1） */
+  look: THREE.Vector3;
   /** 球（中心・半径）が今の画面に少しでも入っているか */
   inView: (center: THREE.Vector3, radius: number) => boolean;
 }
@@ -82,6 +84,11 @@ export function resetWorld(w: World, man: ManState) {
 }
 
 /** おばあさんが立つ位置: プレイヤーの真後ろ（来た方向、+z）にこの距離 */
+/** うめき声: すき間の中心（扉の中心から z 方向へのずれ）、聞こえる距離と見る向きの幅 */
+const DOOR_GAP_DZ = 0.3;
+const PEER_DIST = 1.9;
+const PEER_ANGLE = 0.5;
+const gapAt = new THREE.Vector3();
 const GRANNY_BEHIND = 1.25;
 /** おばあさんの体と吹き出しを包む球（足もとからの高さと半径）。回り込むときは、この球が画面の外にあること */
 const GRANNY_SPHERE_Y = 0.95, GRANNY_SPHERE_R = 1.0;
@@ -114,8 +121,31 @@ export const ANOMALIES: Anomaly[] = [
     apply(w) { w.mStripeMat.color.setHex(0x9e1d1d); },
   },
   {
-    id: 'door_open', name: 'ドアが少し開いている', category: 'C',
+    // ドアの前まで来て、すき間の奥の暗がりを覗き込むと、男性の低いうめき声が聞こえる。覗き込んでいる間は間をおいて繰り返す
+    id: 'door_open', name: 'ドアが少し開いている（覗き込むと、奥から男性のうめき声）', category: 'C',
     apply(w) { w.door.rotation.y = 0.75; },
+    update(ctx, mem) {
+      const v = ctx.world.doorVoid.position;
+      // 開いた扉に隠れていない、すき間の真ん中あたり
+      gapAt.set(v.x, 1.2, v.z - DOOR_GAP_DZ);
+      const dx = gapAt.x - ctx.px, dz = gapAt.z - ctx.pz;
+      const dist = Math.hypot(dx, dz);
+      const lookLen = Math.hypot(ctx.look.x, ctx.look.z);
+      const cos = lookLen > 1e-3 ? (dx * ctx.look.x + dz * ctx.look.z) / (dist * lookLen) : 0;
+      const peering = dist < PEER_DIST && dx > 0.2 && cos > Math.cos(PEER_ANGLE) && ctx.inView(gapAt, 0.15);
+      mem.wait = Math.max(0, (mem.wait ?? 0) - ctx.dt);
+      if (!peering) {
+        mem.peer = 0;
+        return;
+      }
+      mem.peer = (mem.peer ?? 0) + ctx.dt;
+      // 覗き込んで少したってから。一度鳴ったら次まで間をおく
+      if (mem.peer > 0.4 && mem.wait === 0) {
+        const right = (dz * ctx.look.x - dx * ctx.look.z) / (dist * Math.max(lookLen, 1e-3)); // 声のする向き（右が +）
+        ctx.sound('moan', THREE.MathUtils.clamp(1.25 - dist * 0.35, 0.5, 1), right);
+        mem.wait = 5 + Math.random() * 2.5;
+      }
+    },
   },
   {
     id: 'ceiling_low', name: '通路の天井が低い', category: 'C',

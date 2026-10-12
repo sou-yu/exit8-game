@@ -58,6 +58,7 @@ let world!: World;
 let qualityMsgUntil = 0;
 renderer.onQualityChange = () => { qualityMsgUntil = performance.now() + 2500; };
 const sound = new Sound();
+const lookDir = new THREE.Vector3();
 const signTex = Array.from({ length: GOAL + 2 }, (_, i) => numberSignTexture(i));
 
 // ---- 状態 ----
@@ -375,7 +376,8 @@ function frame() {
     const a = game.anomalyId ? ANOMALY_BY_ID.get(game.anomalyId) : null;
     a?.update?.({
       world, dt, px: player.x, pz: player.z, tInM: game.tInM, man,
-      sound: (n, vol) => (n === 'thud' ? sound.thud() : n === 'drip' ? sound.drip(vol) : sound.flicker()),
+      sound: (n, vol, pan) => (n === 'thud' ? sound.thud() : n === 'drip' ? sound.drip(vol) : n === 'moan' ? sound.moan(vol, pan) : sound.flicker()),
+      look: camera.getWorldDirection(lookDir),
       inView: (c, r) => frustum.intersectsSphere(viewSphere.set(c, r)),
     }, game.mem);
   }
