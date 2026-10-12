@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as T from './textures';
 import manGlb from './assets/man.glb?inline';
+import shadowPng from './assets/shadow_sitting.png';
 
 /*
  * 通行人（会社員の男性）。Blender で作った人物モデル（src/assets/man.glb）を読み込む。
@@ -21,8 +21,6 @@ export const WALK_SPEED = 0.71;
 export interface Man {
   /** 足もとが原点で、+z が正面 */
   group: THREE.Group;
-  /** 読み込んだ人物モデルそのもの（黒い人影の元にする） */
-  model: THREE.Object3D;
   mixer: THREE.AnimationMixer;
   walk: THREE.AnimationAction;
   idle: THREE.AnimationAction;
@@ -69,7 +67,7 @@ export async function loadMan(): Promise<Man> {
   group.add(model);
   group.add(blob(0.9));
   return {
-    group, model, mixer, walk, idle, smileTex,
+    group, mixer, walk, idle, smileTex,
     setPace(speed) { walk.timeScale = speed / WALK_SPEED; },
     setSmile(on) {
       smileMeshes.forEach(({ mesh, index }) => { mesh.morphTargetInfluences![index] = on ? 1 : 0; });
@@ -91,40 +89,30 @@ export function blob(size: number): THREE.Mesh {
   return m;
 }
 
+/** 黒い人影の板の大きさ（m）。座った人の頭の高さが約 0.92m になるように */
+const SHADOW_H = 0.93, SHADOW_W = 0.744;
+/** 板の色の倍率。描画の露出とトーンマップを通った後に、元の画像と同じ暗さになるように合わせた値 */
+const SHADOW_GAIN = 0.3;
+
 /**
- * 黒い人影（異変）。通行人と同じ人物モデルを複製し、全身を光沢のない黒にする。
- * 鞄とスマホは外し、腕を体の横に下ろして正面（+z）を向いて直立させる。顔の凹凸も黒に沈んで見えない。
+ * 黒い人影（異変）。床に座って膝を抱え、うつむいている真っ黒な人。
+ * 近づくと消えるので遠くからしか見えない。立体のモデルではなく、写真から切り抜いた姿を板に貼り、
+ * 縦の軸だけ回していつもこちらへ向ける。足もとに柔らかい陰りを置く。
  */
-export function buildShadow(man: Man): THREE.Group {
+export function buildShadow(): THREE.Group {
   const g = new THREE.Group();
-  const fig = cloneSkinned(man.model);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1, metalness: 0, envMapIntensity: 0.3 });
-  fig.traverse((o) => {
-    const m = o as THREE.SkinnedMesh;
-    if (!m.isMesh) return;
-    m.material = mat;
-    m.castShadow = true;
-    m.receiveShadow = false;
-    m.frustumCulled = false;
-    m.morphTargetInfluences?.fill(0);
+  const tex = new THREE.TextureLoader().load(shadowPng);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, color: new THREE.Color(SHADOW_GAIN, SHADOW_GAIN, SHADOW_GAIN), alphaTest: 0.4, side: THREE.DoubleSide,
   });
-  for (const name of ['Briefcase_Removable', 'Smartphone_Removable']) {
-    const o = fig.getObjectByName(name);
-    if (o) o.visible = false;
-  }
-  // 腕を少し体に寄せ、手首を自然に下ろす
-  const turn = (name: string, z: number, x = 0) => {
-    const b = fig.getObjectByName(name);
-    if (b) b.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x, 0, z)));
-  };
-  turn('UpperArmL', -0.15, 0.03); turn('UpperArmR', 0.15, 0.03);
-  turn('ForearmL', 0.05, -0.08); turn('ForearmR', -0.05, -0.08);
+  const fig = new THREE.Mesh(new THREE.PlaneGeometry(SHADOW_W, SHADOW_H), mat);
+  fig.position.y = SHADOW_H / 2;
   g.add(fig);
-  // 首と襟のつなぎ目のすき間（白いシャツでは目立たない）から後ろが透けないように、首の中をふさぐ
-  const plug = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.1, 4, 12), mat);
-  plug.position.set(0, 1.42, -0.005);
-  g.add(plug);
-  g.add(blob(0.9));
+  const b = blob(1.1);
+  b.scale.set(1, 0.55, 1); // 座った人の横に広い陰り
+  g.add(b);
   g.visible = false;
   return g;
 }

@@ -476,7 +476,7 @@ export function buildWorld(man: Man, granny: Granny): World {
   group.add(leak.group);
 
   group.add(man.group);
-  const shadow = buildShadow(man);
+  const shadow = buildShadow();
   group.add(shadow);
   group.add(granny.group);
 

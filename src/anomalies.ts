@@ -275,7 +275,7 @@ export const ANOMALIES: Anomaly[] = [
     },
   },
   {
-    id: 'shadow', name: '通路の奥に黒い人影が立っている', category: 'D',
+    id: 'shadow', name: '通路の奥に黒い人影が膝を抱えて座っている', category: 'D',
     apply(w) {
       w.shadow.visible = true;
       w.shadow.position.set(LS - W / 2 - 0.4, 0, -LM + 1.2);
@@ -283,6 +283,7 @@ export const ANOMALIES: Anomaly[] = [
     update(ctx) {
       const s = ctx.world.shadow;
       if (!s.visible) return;
+      s.rotation.y = Math.atan2(ctx.px - s.position.x, ctx.pz - s.position.z); // 板をいつもこちらへ向ける
       const d = Math.hypot(ctx.px - s.position.x, ctx.pz - s.position.z);
       if (d < 7) {
         s.visible = false;
