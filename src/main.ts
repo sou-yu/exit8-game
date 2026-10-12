@@ -434,6 +434,7 @@ async function init() {
   world.man.group.visible = true;
   world.leak.group.visible = true; // 異変の小道具も同じ
   world.hangingScrawl.visible = true;
+  world.shadow.visible = true;
   world.granny.group.visible = true;
   world.granny.bubble.visible = true;
   world.granny.setCastShadow(true);
@@ -444,6 +445,7 @@ async function init() {
   warmUpMan();
   world.leak.group.visible = false;
   world.hangingScrawl.visible = false;
+  world.shadow.visible = false;
   world.granny.group.visible = false;
   world.granny.bubble.visible = false;
   world.granny.setCastShadow(false);
@@ -462,6 +464,7 @@ function warmUpMan() {
   g.visible = true;
   g.position.set(player.x + 2.5, 0, player.z); // 開始時は +x の向きを見ている
   world.granny.group.position.set(player.x + 2.2, 0, player.z + 0.8); // 異変のおばあさんも同じ（吹き出しごと）
+  world.shadow.position.set(player.x + 2.6, 0, player.z - 0.9); // 黒い人影も
   camera.position.set(player.x, EYE, player.z);
   camera.rotation.set(0, player.yaw, 0);
   world.lighting.update(camera.position);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import * as T from './textures';
 import manGlb from './assets/man.glb?inline';
 
@@ -20,6 +21,8 @@ export const WALK_SPEED = 0.71;
 export interface Man {
   /** 足もとが原点で、+z が正面 */
   group: THREE.Group;
+  /** 読み込んだ人物モデルそのもの（黒い人影の元にする） */
+  model: THREE.Object3D;
   mixer: THREE.AnimationMixer;
   walk: THREE.AnimationAction;
   idle: THREE.AnimationAction;
@@ -66,7 +69,7 @@ export async function loadMan(): Promise<Man> {
   group.add(model);
   group.add(blob(0.9));
   return {
-    group, mixer, walk, idle, smileTex,
+    group, model, mixer, walk, idle, smileTex,
     setPace(speed) { walk.timeScale = speed / WALK_SPEED; },
     setSmile(on) {
       smileMeshes.forEach(({ mesh, index }) => { mesh.morphTargetInfluences![index] = on ? 1 : 0; });
@@ -88,18 +91,39 @@ export function blob(size: number): THREE.Mesh {
   return m;
 }
 
-/** 黒い人影（異変） */
-export function buildShadow(): THREE.Group {
+/**
+ * 黒い人影（異変）。通行人と同じ人物モデルを複製し、全身を光沢のない黒にする。
+ * 鞄とスマホは外し、腕を体の横に下ろして正面（+z）を向いて直立させる。顔の凹凸も黒に沈んで見えない。
+ */
+export function buildShadow(man: Man): THREE.Group {
   const g = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color: 0x030303 });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 1.4, 6, 12), mat);
-  body.scale.set(1, 1, 0.7);
-  body.position.y = 0.92;
-  g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), mat);
-  head.position.y = 1.86;
-  g.add(head);
-  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+  const fig = cloneSkinned(man.model);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1, metalness: 0, envMapIntensity: 0.3 });
+  fig.traverse((o) => {
+    const m = o as THREE.SkinnedMesh;
+    if (!m.isMesh) return;
+    m.material = mat;
+    m.castShadow = true;
+    m.receiveShadow = false;
+    m.frustumCulled = false;
+    m.morphTargetInfluences?.fill(0);
+  });
+  for (const name of ['Briefcase_Removable', 'Smartphone_Removable']) {
+    const o = fig.getObjectByName(name);
+    if (o) o.visible = false;
+  }
+  // 腕を少し体に寄せ、手首を自然に下ろす
+  const turn = (name: string, z: number, x = 0) => {
+    const b = fig.getObjectByName(name);
+    if (b) b.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x, 0, z)));
+  };
+  turn('UpperArmL', -0.15, 0.03); turn('UpperArmR', 0.15, 0.03);
+  turn('ForearmL', 0.05, -0.08); turn('ForearmR', -0.05, -0.08);
+  g.add(fig);
+  // 首と襟のつなぎ目のすき間（白いシャツでは目立たない）から後ろが透けないように、首の中をふさぐ
+  const plug = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.1, 4, 12), mat);
+  plug.position.set(0, 1.42, -0.005);
+  g.add(plug);
   g.add(blob(0.9));
   g.visible = false;
   return g;
