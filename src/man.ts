@@ -8,14 +8,14 @@ import manGlb from './assets/man.glb?inline';
  * 通行人（会社員の男性）。Blender で作った人物モデル（src/assets/man.glb）を読み込む。
  * モデルには歩行（Walk）・待機（Idle）の 1 秒ループと、笑顔の形状（モーフ Smile）が入っている。
  * 笑顔用の顔画像（head_smile）も同じファイルに入れてあり、異変ではモーフと顔画像をまとめて切り替える。
- * 元の GLB からの軽量化の手順は README に書いた。
+ * 骨組み・重み・歩行は tools/man/rig.mjs で作り直した。元の GLB からの手順は README に書いた。
  */
 
 /**
  * 歩行アニメーションをそのままの速さで再生したときの歩く速さ（m/秒）。
- * 接地中のつま先が 0.5 秒で 0.254 m 後ろへ動く（ゲーム内で測った値）ので、この速さで進めば足が床で滑らない。
+ * 着いている足が 1 秒あたり約 1.02 m 後ろへ動く（ゲーム内で測った値）ので、この速さで進めば足が床で滑らない。
  */
-export const WALK_SPEED = 0.51;
+export const WALK_SPEED = 1.02;
 
 export interface Man {
   /** 足もとが原点で、+z が正面 */
