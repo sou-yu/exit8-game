@@ -10,6 +10,11 @@ import { loadGranny } from './granny';
 
 const GOAL = 8;
 const ANOMALY_RATE = 0.6;
+/**
+ * 1回のクリア（1〜8番を続けて正解）で必ず出す異変の最低数。
+ * 異変はまだ出していないものから順に出すので、16種類なら 5回クリアすれば 5×4=20 回以上出て全種類に出会える
+ */
+const MIN_PER_RUN = 4;
 const EYE = 1.6;
 const RADIUS = 0.3;
 /** 縦の視野角（度）。人の目で見た印象に近い、広角すぎない値 */
@@ -72,6 +77,8 @@ const game = {
   enteredM: false,
   tInM: -1,
   recent: [] as string[],
+  /** 今の連続正解（1番〜）の中で出た異変の数。0番に戻ると数え直す */
+  runAnomalies: 0,
   found: new Set<string>(),
   startTime: 0,
   mem: {} as Record<string, number>,
@@ -110,20 +117,28 @@ function updatePendingSign() {
   }
 }
 
+/** このページを開いてから、まだ一度も出していない異変（全部出したら、また全種類から） */
+const unshown = new Set(ANOMALIES.map((a) => a.id));
+
 function pickAnomaly(): string | null {
   // 0番は必ず異変なし。8番（出口の通路）も 1〜7番と同じ確率で異変が出る
   if (game.currentLevel === 0 || game.currentLevel > GOAL) return null;
   if (FORCE && ANOMALY_BY_ID.has(FORCE)) return FORCE;
-  if (Math.random() >= ANOMALY_RATE) return null;
-  // 直近2回の異変は除外し、未発見の異変を優先する
-  let pool = ANOMALIES.filter((a) => !game.recent.includes(a.id));
-  const unseen = pool.filter((a) => !game.found.has(a.id));
-  if (unseen.length && Math.random() < 0.7) pool = unseen;
+  // 残りの番号すべてで出しても最低数に届かなくなるなら、確率によらず出す
+  const remaining = GOAL - game.currentLevel + 1;
+  const must = game.runAnomalies + remaining <= MIN_PER_RUN;
+  if (!must && Math.random() >= ANOMALY_RATE) return null;
+  if (!unshown.size) ANOMALIES.forEach((a) => unshown.add(a.id));
+  // まだ出していない異変から選ぶ。直近2回の異変はできるだけ避ける
+  let pool = ANOMALIES.filter((a) => unshown.has(a.id));
+  const fresh = pool.filter((a) => !game.recent.includes(a.id));
+  if (fresh.length) pool = fresh;
   return pool[Math.floor(Math.random() * pool.length)].id;
 }
 
 function generateCorridor() {
   resetWorld(world, man);
+  if (game.currentLevel <= 1) game.runAnomalies = 0;
   game.anomalyId = pickAnomaly();
   game.hasAnomaly = game.anomalyId !== null;
   game.enteredM = false;
@@ -133,6 +148,8 @@ function generateCorridor() {
   if (game.anomalyId) {
     ANOMALY_BY_ID.get(game.anomalyId)!.apply(world, man);
     game.recent = [game.anomalyId, ...game.recent].slice(0, 2);
+    unshown.delete(game.anomalyId);
+    game.runAnomalies++;
   }
   // 8番の出口案内は「地上へ」。矢印の異変ならその矢印を逆向きにする
   if (game.currentLevel >= GOAL) setHangingSign(world, game.anomalyId === 'sign_arrow' ? 'goalReversed' : 'goal');
