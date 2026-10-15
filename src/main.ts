@@ -63,6 +63,7 @@ let world!: World;
 let qualityMsgUntil = 0;
 renderer.onQualityChange = () => { qualityMsgUntil = performance.now() + 2500; };
 const sound = new Sound();
+if (DEBUG) (window as unknown as { __sound: Sound }).__sound = sound; // 動作確認用
 const lookDir = new THREE.Vector3();
 const signTex = Array.from({ length: GOAL + 2 }, (_, i) => numberSignTexture(i));
 
@@ -83,7 +84,7 @@ const game = {
   startTime: 0,
   mem: {} as Record<string, number>,
 };
-const player = { x: 1.5, z: 1.5, yaw: -Math.PI / 2, pitch: 0, bob: 0, stepAcc: 0 };
+const player = { x: 1.5, z: 1.5, yaw: -Math.PI / 2, pitch: 0, bob: 0 };
 /** 前後・左右の速さ（m/s、体の向き基準）。急に止まったり動き出したりしないよう、なめらかに追従させる */
 const vel = { f: 0, s: 0, amp: 0 };
 const man: ManState = { z: -LM + 1, walking: false, visible: false, speed: WALK_SPEED, stare: false };
@@ -288,8 +289,9 @@ function updatePlayer(dt: number) {
   if (canStand(player.x, player.z + mz, RADIUS) && !hitsGranny(player.x, player.z + mz)) player.z += mz;
   const moved = Math.hypot(mx, mz);
   player.bob += (moved * Math.PI * 2) / 1.5; // 1.5m で左右1歩ずつ
-  player.stepAcc += moved;
-  if (player.stepAcc > 0.75) { player.stepAcc = 0; sound.step(); }
+  // 足音: ゆっくり（通常）は「革靴で走る」、速い（Shift / 走る）ときは「革靴で歩く」を、動いている間だけ鳴らす
+  const spd = moved / Math.max(dt, 1e-4);
+  if (spd > 0.3) sound.loop(spd > 2.4 ? 'shoesWalk' : 'shoesRun', Math.min(1, spd / 1.8) * 1.5); // 録音が小さめなので少し上げる
 
   // 判定通路への出入り
   if (!game.enteredM && player.z < -4) onEnterM();
@@ -393,11 +395,13 @@ function frame() {
     const a = game.anomalyId ? ANOMALY_BY_ID.get(game.anomalyId) : null;
     a?.update?.({
       world, dt, px: player.x, pz: player.z, tInM: game.tInM, man,
-      sound: (n, vol, pan) => (n === 'thud' ? sound.thud() : n === 'drip' ? sound.drip(vol) : n === 'moan' ? sound.moan(vol, pan) : sound.flicker()),
+      sound: (n, vol, pan) => (n === 'thud' ? sound.thud() : n === 'flicker' ? sound.flicker() : sound.play(n, vol, pan)),
+      loop: (n, vol) => sound.loop(n, vol, 0.3, 0.3),
       look: camera.getWorldDirection(lookDir),
       inView: (c, r) => frustum.intersectsSphere(viewSphere.set(c, r)),
     }, game.mem);
   }
+  sound.endFrame();
   world.lighting.update(camera.position);
   updatePendingSign();
   if (DEBUG) {

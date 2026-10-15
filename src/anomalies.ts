@@ -11,7 +11,10 @@ export interface Ctx {
   /** 判定通路に入ってからの経過時間（入っていなければ -1） */
   tInM: number;
   man: ManState;
-  sound: (name: 'thud' | 'flicker' | 'drip' | 'moan', vol?: number, pan?: number) => void;
+  /** 一度鳴らす。録音の音は長さ（秒、読み込み中なら 0）を返す */
+  sound: (name: 'thud' | 'flicker' | 'drip' | 'scream' | 'ohashi', vol?: number, pan?: number) => number | void;
+  /** 繰り返し鳴る音の音量をこのフレームで指定する。呼ばないフレームは小さくなって消える */
+  loop: (name: 'afterlife', vol: number) => void;
   /** カメラの向き（長さ 1） */
   look: THREE.Vector3;
   /** 球（中心・半径）が今の画面に少しでも入っているか */
@@ -121,8 +124,8 @@ export const ANOMALIES: Anomaly[] = [
     apply(w) { w.tracks.group.visible = true; },
   },
   {
-    // ドアの前まで来て、すき間の奥の暗がりを覗き込むと、男性の低いうめき声が聞こえる。覗き込んでいる間は間をおいて繰り返す
-    id: 'door_open', name: 'ドアが少し開いている（覗き込むと、奥から男性のうめき声）', category: 'C',
+    // ドアの前まで来て、すき間の奥の暗がりを覗き込むと、男性の悲鳴が聞こえる。覗き込んでいる間は間をおいて繰り返す
+    id: 'door_open', name: 'ドアが少し開いている（覗き込むと、奥から男性の悲鳴）', category: 'C',
     apply(w) { w.door.rotation.y = 0.75; },
     update(ctx, mem) {
       const v = ctx.world.doorVoid.position;
@@ -142,8 +145,8 @@ export const ANOMALIES: Anomaly[] = [
       // 覗き込んで少したってから。一度鳴ったら次まで間をおく
       if (mem.peer > 0.4 && mem.wait === 0) {
         const right = (dz * ctx.look.x - dx * ctx.look.z) / (dist * Math.max(lookLen, 1e-3)); // 声のする向き（右が +）
-        ctx.sound('moan', THREE.MathUtils.clamp(1.25 - dist * 0.35, 0.5, 1), right);
-        mem.wait = 5 + Math.random() * 2.5;
+        const len = ctx.sound('scream', THREE.MathUtils.clamp(1.25 - dist * 0.35, 0.5, 1), right) || 0;
+        mem.wait = len + 3 + Math.random() * 2.5;
       }
     },
   },
@@ -236,6 +239,7 @@ export const ANOMALIES: Anomaly[] = [
       const grp = g.group;
       const seen = () => ctx.inView(grannyAt.set(grp.position.x, GRANNY_SPHERE_Y, grp.position.z), GRANNY_SEEN_R);
       const maybeSeen = () => ctx.inView(grannyAt.set(grp.position.x, GRANNY_SPHERE_Y, grp.position.z), GRANNY_SPHERE_R);
+      mem.voiceWait = Math.max(0, (mem.voiceWait ?? 0) - ctx.dt);
       if (mem.shown && !(grp.visible && seen())) {
         // 目をそらした
         mem.shown = 0;
@@ -257,6 +261,7 @@ export const ANOMALIES: Anomaly[] = [
           // 振り向いた
           mem.shown = 1;
           mem.t = 0;
+          mem.spoke = 0;
           g.setCastShadow(true);
         }
       }
@@ -270,6 +275,11 @@ export const ANOMALIES: Anomaly[] = [
         g.bubble.visible = k > 0;
         g.bubble.scale.set(0.6 * (0.6 + 0.4 * k), 0.25 * (0.6 + 0.4 * k), 1);
         g.bubble.material.opacity = k;
+        // 吹き出しが出ると同時に「お箸捨ててね」と話しかけてくる（前の声がまだ続いていれば重ねない）
+        if (k > 0 && !mem.spoke) {
+          mem.spoke = 1;
+          if (mem.voiceWait === 0) mem.voiceWait = ctx.sound('ohashi') || 0;
+        }
       }
       g.mixer.update(ctx.dt);
     },
@@ -285,6 +295,9 @@ export const ANOMALIES: Anomaly[] = [
       if (!s.visible) return;
       s.rotation.y = Math.atan2(ctx.px - s.position.x, ctx.pz - s.position.z); // 板をいつもこちらへ向ける
       const d = Math.hypot(ctx.px - s.position.x, ctx.pz - s.position.z);
+      // 近づくほど「死後の世界」が大きく聞こえてくる
+      const k = THREE.MathUtils.clamp((30 - d) / (30 - 7), 0, 1);
+      ctx.loop('afterlife', 0.08 + 0.92 * k * k);
       if (d < 7) {
         s.visible = false;
         ctx.sound('thud');
