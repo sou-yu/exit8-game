@@ -6,12 +6,11 @@
 ## 遊び方
 
 - すぐ遊ぶ: `dist/index.html` をブラウザ（Chrome / Edge）で開く
-- 公開版: https://sou-yu.github.io/exit8-game/
 - 開発する: Node.js を入れて、このフォルダで
   ```
   npm install
   npm run dev      # http://localhost:5173 で起動、保存すると自動で反映
-  npm run build    # dist/index.html を作り直す（公開版は docs/index.html にコピーする）
+  npm run build    # dist/index.html を作り直す
   ```
 
 iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと早歩き）、右側をなぞって視点、右上の Ⅱ で一時停止。スマートフォンは軽量、タブレットは標準画質から始まる。
@@ -92,7 +91,7 @@ Three.js r186。変更前の画面を同じ視点で撮り、CGらしく見え�
 | 接触影がない | 焼き込みの陰り（巾木・帯の下・入隅・ポスターやドアのまわり）＋ GTAO ＋ 影付きライト（PCF、bias / normalBias 調整）＋ 足もとの陰り |
 | 模様の繰り返しが目立つ | 1m 周期の細かい模様に、場所ごとのむら（焼き込み）を重ねる。ループで重なる場所は同じむらになるよう対称に置く |
 | 露出が高く白飛び、光のもやが広い | 照明の明るさの比を実際の蛍光灯に近づけ、露出とホワイトバランスで白い壁が明るい白に写るよう合わせた。Bloom は灯具のまわりのにじみだけ |
-| 通行人が箱の組み合わせ | Blender で作った人物モデル（骨格・歩行アニメーション・笑顔の形状付き）に置き換えた |
+| 通行人が箱の組み合わせ | Blender で作った人物モデル（骨格・歩行アニメーション・笑顔の形状付き）に置き換えた。のちにリアル版（MPFB）に差し替えた |
 
 描画の流れ: シーン（HDR, MSAA）→ GTAO → Bloom → ACES Filmic + sRGB（OutputPass）→ FXAA（標準・軽量）→ 色調（低めの彩度、陰は青みのある灰）・控えめな周辺減光・ディザ。
 IBL は通路そのものを2回写した環境マップ（PMREM。白い壁どうしの照り返しを2回分）。被写界深度・色収差・画面ノイズは使わない。
@@ -112,37 +111,18 @@ IBL は通路そのものを2回写した環境マップ（PMREM。白い壁ど�
 
 ## 通行人のモデル
 
-Blender で作った人物モデル（`office_man_rigged.glb` 通常の顔、`office_man_smile.glb` 笑顔）を、ゲーム用に1つのファイル `src/assets/man.glb`（約1.7MB）にまとめてビルド時に HTML へ埋め込んでいる。
+Blender（MPFB）で作ったリアル版の人物モデル（`../blender/salaryman_mpfb/out/salaryman_game.glb`）を、ゲーム用に軽くして `src/assets/man.glb`（約2.5MB）にし、ビルド時に HTML へ埋め込んでいる。作り方は `../blender/salaryman_mpfb/out/README.md`。
 
-- 身長 約1.75m、骨 32本。歩行（Walk、1.2秒で2歩）・待機（Idle、4秒）のループと、笑顔の形状（モーフ Smile）を使う
-- 普段は通常の顔。異変 man_smile ではモーフを 1 にし、顔の画像を笑顔用（`head_smile`）に差し替える
-- 歩く速さは 0.71 m/秒。歩行アニメーションの歩幅に合わせ、足が床で滑らない速さにしている（`src/man.ts` の `WALK_SPEED`）
-- 骨組みと歩行は `tools/man/rig.mjs` で作り直した（下の表）
+- 身長 約1.73m、骨 54本（Mixamo と同じ名前）。歩行（Walk、1.67秒で2歩）・待機（Idle、4秒）のループと、笑顔の形状（モーフ Smile、体と歯）を使う
+- 普段は通常の顔。異変 man_smile ではモーフを 1 にし、顔の画像を笑顔用（`skin_smile`）に差し替える
+- 歩く速さは 0.55 m/秒。歩行アニメーションの歩幅に合わせ、足が床で滑らない速さにしている（`src/man.ts` の `WALK_SPEED`）
 - 立ち止まる異変（man_stare）では待機の動きへなめらかに切り替え、こちらへゆっくり向き直る
-- 頭部の土台は MakeHuman のベースメッシュ（CC0 1.0）。顔・髪・衣服の画像は参照用に用意した写真から作ったもの
+- 前のモデルは `tools/man/man_previous.glb`、前の `man.ts` は `tools/man/man_previous.ts` に残してある
 
-元の2ファイル（合計 約28MB）からの軽量化（`tools/man/`）:
-
-| 項目 | 内容 |
-| --- | --- |
-| 画像 | PNG を JPEG に（顔は 2048px のまま、服 1448px、鞄・歯 512px） |
-| 形状 | 手・シャツ・ズボン・鞄の金具だけ間引いた（18.0万 → 10.5万三角形）。顔・目・口の中・歯は元のまま |
-| アニメーション | 30fps の段付き（STEP）を補間（LINEAR）にし、60fps でもなめらかに動くようにした |
-| 圧縮 | 量子化（KHR_mesh_quantization）と meshopt 圧縮（EXT_meshopt_compression） |
-| 笑顔 | 2つのファイルは顔の画像以外が同じなので、笑顔の顔画像だけを同じファイルに追加した |
-| 骨組み | 股関節・膝・足首・指の付け根を体の形に合わせて置き直し、骨の向きをモデルの軸にそろえた |
-| 手 | 元の手は左右が逆の形（親指が体の内側）だったので、手首の中心を通る面で鏡に映して直した（持っているスマホ・鞄も一緒に） |
-| 重み | 元は部位ごとにほぼ1本の骨だけで動いていたので、シャツ・ズボン・靴を骨からの距離でなめらかに付け直した。顔・首・襟・手・鞄・スマホは元のまま |
-| 歩行 | 脚は IK で計算（着いている足が床で滑らない、かかとから着いて指の付け根でかかとを上げて蹴る）。腰の上下・左右の揺れとひねり、胸の逆向きのひねり、腕の振り（鞄を持つ右腕は小さく） |
-
-作り直すとき（Blender から書き出し直したとき）は、作業用フォルダに `@gltf-transform/core@4 @gltf-transform/functions@4 @gltf-transform/extensions@4 meshoptimizer@0.22` を入れ、Python の Pillow を用意して:
+作り直すとき（Blender から書き出し直したとき）は、作業用フォルダ（`../blender/gltf_work`、`@gltf-transform/core@4 @gltf-transform/functions@4 @gltf-transform/extensions@4 meshoptimizer@0.22` を入れてある）で:
 
 ```
-node tools/man/extract-images.cjs office_man_rigged.glb img/n
-node tools/man/extract-images.cjs office_man_smile.glb img/s
-python tools/man/textures.py img jpg
-node tools/man/rig.mjs office_man_rigged.glb rigged.glb "$PWD/node_modules/three/build/three.module.js"
-node tools/man/optimize.mjs rigged.glb src/assets/man.glb jpg
+node ../../game/tools/man/optimize_mpfb.mjs ../salaryman_mpfb/out/salaryman_game.glb ../../game/src/assets/man.glb
 ```
 
 ## おばあさんのモデル

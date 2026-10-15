@@ -6,17 +6,17 @@ import manGlb from './assets/man.glb?inline';
 import shadowPng from './assets/shadow_sitting.png';
 
 /*
- * 通行人（会社員の男性）。Blender で作った人物モデル（src/assets/man.glb）を読み込む。
- * モデルには歩行（Walk）・待機（Idle）の 1 秒ループと、笑顔の形状（モーフ Smile）が入っている。
- * 笑顔用の顔画像（head_smile）も同じファイルに入れてあり、異変ではモーフと顔画像をまとめて切り替える。
- * 骨組み・重み・歩行は tools/man/rig.mjs で作り直した。元の GLB からの手順は README に書いた。
+ * 通行人（会社員の男性）。Blender（MPFB）で作ったリアル版の人物モデル（src/assets/man.glb）を読み込む。
+ * モデルには歩行（Walk、1.67 秒で 2 歩）・待機（Idle、4 秒）のループと、笑顔の形状（モーフ Smile、体と歯）が入っている。
+ * 笑顔用の顔画像（skin_smile）も同じファイルに入れてあり、異変ではモーフと顔画像をまとめて切り替える。
+ * 作り方は blender/salaryman_mpfb/out/README.md、ゲーム用の軽量化は tools/man/optimize_mpfb.mjs。
  */
 
 /**
  * 歩行アニメーションをそのままの速さで再生したときの歩く速さ（m/秒）。
- * 着いている足が 1 秒あたり約 0.7 m 後ろへ動く（測った値）ので、この速さで進めば足が床で滑らない。
+ * 着いている足が 1 秒あたり約 0.55 m 後ろへ動く（アニメーションを作るときの値）ので、この速さで進めば足が床で滑らない。
  */
-export const WALK_SPEED = 0.71;
+export const WALK_SPEED = 0.55;
 
 export interface Man {
   /** 足もとが原点で、+z が正面 */
@@ -37,7 +37,7 @@ export async function loadMan(): Promise<Man> {
   const gltf = await loader.parseAsync(data, '');
   const model = gltf.scene;
 
-  // 笑顔のモーフを持つメッシュ（顔・目・口の中・歯）と、顔の画像を使うマテリアル（顔・目）
+  // 笑顔のモーフを持つメッシュ（顔・歯）と、顔の画像を使うマテリアル（肌）
   const smileMeshes: { mesh: THREE.Mesh; index: number }[] = [];
   const faceMats = new Set<THREE.MeshStandardMaterial>();
   model.traverse((o) => {
@@ -47,11 +47,11 @@ export async function loadMan(): Promise<Man> {
     const index = m.morphTargetDictionary?.Smile;
     if (index !== undefined) smileMeshes.push({ mesh: m, index });
     const mat = m.material as THREE.MeshStandardMaterial;
-    if (mat.map?.name === 'anatomical_head_albedo_neck') faceMats.add(mat);
+    if (mat.map?.name === 'skin_albedo') faceMats.add(mat);
   });
   const normalTex = [...faceMats][0].map!;
   const parser = gltf.parser;
-  const smileIndex = (parser.json.images as { name?: string }[]).findIndex((i) => i.name === 'head_smile');
+  const smileIndex = (parser.json.images as { name?: string }[]).findIndex((i) => i.name === 'skin_smile');
   const smileImage = await parser.loadImageSource(smileIndex, parser.textureLoader);
   const smileTex = normalTex.clone();
   smileTex.source = smileImage.source;
