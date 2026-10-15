@@ -7,8 +7,8 @@ import ohashiUrl from './assets/sound/ohashi.wav?inline';
 
 // 録音した音（8番出口/sound のファイル）。HTML に埋め込み、最初の再生時に読み込む
 const FILES = {
-  shoesRun, // 「革靴で走る」: ゆっくり移動するときの足音
-  shoesWalk, // 「革靴で歩く」: 速く移動するときの足音
+  shoesRun, // 「革靴で走る」: 速く移動するときの足音
+  shoesWalk, // 「革靴で歩く」: ゆっくり移動するときの足音
   drip: dripUrl, // 「水滴3」: 換気口の赤い液体が落ちる音
   afterlife: afterlifeUrl, // 「死後の世界」: 黒い人影に近づくほど大きくなる
   scream: screamUrl, // 「男性の悲鳴」: 少し開いたドアの奥を覗くと聞こえる

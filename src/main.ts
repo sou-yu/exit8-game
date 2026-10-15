@@ -289,9 +289,9 @@ function updatePlayer(dt: number) {
   if (canStand(player.x, player.z + mz, RADIUS) && !hitsGranny(player.x, player.z + mz)) player.z += mz;
   const moved = Math.hypot(mx, mz);
   player.bob += (moved * Math.PI * 2) / 1.5; // 1.5m で左右1歩ずつ
-  // 足音: ゆっくり（通常）は「革靴で走る」、速い（Shift / 走る）ときは「革靴で歩く」を、動いている間だけ鳴らす
+  // 足音: ゆっくり（通常）は「革靴で歩く」、速い（Shift / 走る）ときは「革靴で走る」を、動いている間だけ鳴らす
   const spd = moved / Math.max(dt, 1e-4);
-  if (spd > 0.3) sound.loop(spd > 2.4 ? 'shoesWalk' : 'shoesRun', Math.min(1, spd / 1.8) * 1.5); // 録音が小さめなので少し上げる
+  if (spd > 0.3) sound.loop(spd > 2.4 ? 'shoesRun' : 'shoesWalk', Math.min(1, spd / 1.8) * 1.5); // 録音が小さめなので少し上げる
 
   // 判定通路への出入り
   if (!game.enteredM && player.z < -4) onEnterM();
