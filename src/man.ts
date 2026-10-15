@@ -6,17 +6,18 @@ import manGlb from './assets/man.glb?inline';
 import shadowPng from './assets/shadow_sitting.png';
 
 /*
- * 通行人（会社員の男性）。Blender（MPFB）で作ったリアル版の人物モデル（src/assets/man.glb）を読み込む。
- * モデルには歩行（Walk、1.67 秒で 2 歩）・待機（Idle、4 秒）のループと、笑顔の形状（モーフ Smile、体と歯）が入っている。
+ * 通行人（会社員の男性）。Tripo で作った写真風の人物モデルに Blender で骨と動きを付けたもの（src/assets/man.glb）を読み込む。
+ * モデルには歩行（Walk、1.67 秒で 2 歩）・待機（Idle、4 秒）のループと、笑顔の形状（モーフ Smile）が入っている。
  * 笑顔用の顔画像（skin_smile）も同じファイルに入れてあり、異変ではモーフと顔画像をまとめて切り替える。
- * 作り方は blender/salaryman_mpfb/out/README.md、ゲーム用の軽量化は tools/man/optimize_mpfb.mjs。
+ * 作り方は blender/businessman_tripo/tools（rig → smile → props → retarget → export）。
+ * 前の MPFB 版は tools/man/man_mpfb.glb に残してある。
  */
 
 /**
  * 歩行アニメーションをそのままの速さで再生したときの歩く速さ（m/秒）。
- * 着いている足が 1 秒あたり約 0.55 m 後ろへ動く（アニメーションを作るときの値）ので、この速さで進めば足が床で滑らない。
+ * MPFB 版の歩き（0.55 m/秒）を股の高さの比（約 1.02）で移したので、この速さで進めば足が床で滑らない。
  */
-export const WALK_SPEED = 0.55;
+export const WALK_SPEED = 0.56;
 
 export interface Man {
   /** 足もとが原点で、+z が正面 */
