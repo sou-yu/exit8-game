@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as T from './textures';
-import { WALK_SPEED } from './man';
+import { MAN_SPEED } from './man';
 import { LM, LS, W, type World } from './world';
 
 export interface Ctx {
@@ -82,7 +82,7 @@ export function resetWorld(w: World, man: ManState) {
   w.granny.group.visible = false;
   w.granny.bubble.visible = false;
   w.granny.setCastShadow(false);
-  man.speed = WALK_SPEED;
+  man.speed = MAN_SPEED;
   man.stare = false;
 }
 

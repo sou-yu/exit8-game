@@ -19,6 +19,9 @@ import shadowPng from './assets/shadow_sitting.png';
  */
 export const WALK_SPEED = 0.56;
 
+/** 通行人がふだん歩く速さ（m/秒）。歩行アニメーションより 3 割速く、再生も setPace で同じ倍率に速めるので足は滑らない */
+export const MAN_SPEED = WALK_SPEED * 1.3;
+
 export interface Man {
   /** 足もとが原点で、+z が正面 */
   group: THREE.Group;

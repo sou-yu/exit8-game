@@ -5,7 +5,7 @@ import { ANOMALIES, ANOMALY_BY_ID, resetWorld, setHangingSign, type ManState } f
 import { numberSignTexture } from './textures';
 import { Sound } from './audio';
 import { TouchControls, isTouchDevice } from './touch';
-import { loadMan, WALK_SPEED } from './man';
+import { loadMan, MAN_SPEED } from './man';
 import { loadGranny } from './granny';
 
 const GOAL = 8;
@@ -87,7 +87,7 @@ const game = {
 const player = { x: 1.5, z: 1.5, yaw: -Math.PI / 2, pitch: 0, bob: 0 };
 /** 前後・左右の速さ（m/s、体の向き基準）。急に止まったり動き出したりしないよう、なめらかに追従させる */
 const vel = { f: 0, s: 0, amp: 0 };
-const man: ManState = { z: -LM + 1, walking: false, visible: false, speed: WALK_SPEED, stare: false };
+const man: ManState = { z: -LM + 1, walking: false, visible: false, speed: MAN_SPEED, stare: false };
 
 const signShown = new Map<THREE.Mesh, number>();
 function setSign(mesh: THREE.Mesh, n: number) {
