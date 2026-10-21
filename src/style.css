@@ -16,6 +16,10 @@ button:hover { background: #38a07c; }
 button:disabled { background: #3a4a44; color: #aab; cursor: default; }
 .status { min-height: 1.4em; margin: 10px 0 0; font-size: 13px; color: #8fc9b2; }
 .status.error { color: #ff9b8a; text-align: left; white-space: pre-wrap; }
+/* 捕まったときの暗転（on で真っ暗、out でゆっくり戻る） */
+#fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 5; }
+#fade.on { opacity: 1; }
+#fade.out { transition: opacity 1.6s ease-in 0.5s; }
 #hint { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 13px;
   color: rgba(255,255,255,0.55); pointer-events: none; text-shadow: 0 0 4px #000; }
 #debug { position: fixed; left: 8px; top: 8px; font: 12px monospace; color: #ff0; pointer-events: none; }

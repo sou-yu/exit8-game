@@ -19,6 +19,8 @@ export interface Ctx {
   look: THREE.Vector3;
   /** 球（中心・半径）が今の画面に少しでも入っているか */
   inView: (center: THREE.Vector3, radius: number) => boolean;
+  /** 捕まった: 0番の最初の場所に戻す */
+  caught: () => void;
 }
 
 export interface ManState {
@@ -84,12 +86,18 @@ export function resetWorld(w: World, man: ManState) {
   w.granny.group.visible = false;
   w.granny.bubble.visible = false;
   w.granny.setCastShadow(false);
+  w.tileMan.group.visible = false;
+  w.tileMan.group.position.copy(w.tileManHome);
+  w.tileMan.group.rotation.y = Math.PI / 2;
+  w.tileMan.rest();
   man.speed = MAN_SPEED;
   man.stare = false;
 }
 
 /** 巨大化したおじさんの大きさの倍率（身長 約 1.75m → 約 2.6m。天井は 2.8m、出口案内の板の下端は約 2.1m） */
 const MAN_GIANT = 1.5;
+/** 耳タイルマン: 歩き出す距離、追いかける速さ（早歩き 3.0 m/秒より少し遅い）、速さに届くまでの時間、捕まる距離 */
+const TILE_WAKE = 3.5, TILE_SPEED = 2.5, TILE_ACCEL = 1.2, TILE_CATCH = 0.55;
 /** 目が追う異変: プレイヤーの目の高さ、黒目が動ける楕円の半径（横・縦）、追う速さ */
 const EYE_Y = 1.6;
 const GAZE_RZ = 0.2, GAZE_RY = 0.045;
@@ -317,6 +325,38 @@ export const ANOMALIES: Anomaly[] = [
         }
       }
       g.mixer.update(ctx.dt);
+    },
+  },
+  {
+    // 壁のタイル柄に擬態して壁際に立っている。近づくと歩き出して追いかけてくる。追いつかれると 0番に戻される
+    id: 'tile_man', name: '壁のタイルに擬態した耳タイルマンが立っていて、近づくと追いかけてくる', category: 'D',
+    apply(w) { w.tileMan.group.visible = true; },
+    update(ctx, mem) {
+      const t = ctx.world.tileMan;
+      const g = t.group;
+      const dx = ctx.px - g.position.x, dz = ctx.pz - g.position.z;
+      const d = Math.hypot(dx, dz);
+      if (!mem.chase && d < TILE_WAKE && ctx.tInM >= 0) {
+        mem.chase = 1;
+        mem.v = 0;
+        ctx.sound('thud', 0.7);
+      }
+      if (!mem.chase) return;
+      if (d < TILE_CATCH) {
+        ctx.sound('thud');
+        ctx.caught();
+        return;
+      }
+      // こちらへ向き直りながら、だんだん速くなって追ってくる（通路の幅からははみ出さない）
+      mem.v = Math.min(TILE_SPEED, (mem.v ?? 0) + (TILE_SPEED / TILE_ACCEL) * ctx.dt);
+      const target = Math.atan2(dx, dz);
+      let diff = target - g.rotation.y;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      g.rotation.y += diff * (1 - Math.exp(-ctx.dt / 0.15));
+      const step = Math.min(mem.v * ctx.dt, d);
+      g.position.x = THREE.MathUtils.clamp(g.position.x + (dx / d) * step, LS - W + 0.3, LS - 0.3);
+      g.position.z += (dz / d) * step;
+      t.animate(ctx.dt, mem.v);
     },
   },
   {

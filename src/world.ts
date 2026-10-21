@@ -10,6 +10,7 @@ import { Lighting, type Lamp } from './lighting';
 import { buildShadow, type Man } from './man';
 import { buildLeak, type Leak } from './leak';
 import { buildTracks, type Tracks } from './tracks';
+import { buildTileMan, type TileMan } from './tileman';
 
 export { W, H, LS, LM, S_CENTER, FORWARD_SHIFT, canStand } from './layout';
 export type { Lamp } from './lighting';
@@ -43,6 +44,9 @@ export interface World {
   tracks: Tracks;
   /** 振り向くとすぐ後ろに立っているおばあさん（異変、普段は非表示） */
   granny: Granny;
+  /** 壁のタイルに擬態した耳タイルマン（異変、普段は非表示）と、壁際に立つ位置 */
+  tileMan: TileMan;
+  tileManHome: THREE.Vector3;
 }
 
 /** 壁の向き: 法線 (nx, nz) を向く物を (x, y, z) に置く */
@@ -87,6 +91,7 @@ const POSTER_Z = POSTER_KINDS.map((_, i) => -8 - i * 3.5);
 const DOOR_Z = [-11, -21];
 const VENT_Z = [-16, -6];
 const HYDRANT_Z = -25.5;
+const TILEMAN_Z = -25.5;
 const SIGN_SPOTS: [number, number, number, number][] = [ // x, z, nx, nz
   [LS, W / 2, -1, 0], [0, W / 2, 1, 0], [2 * LS - W, -LM - W / 2, -1, 0], [LS - W, -LM - W / 2, 1, 0],
 ];
@@ -494,9 +499,13 @@ export function buildWorld(man: Man, granny: Granny): World {
   const shadow = buildShadow();
   group.add(shadow);
   group.add(granny.group);
+  const tileMan = buildTileMan();
+  group.add(tileMan.group);
+  // 判定通路の西側の壁、ポスターの並びの先（壁に背をつけて、通路のほうを向く）
+  const tileManHome = new THREE.Vector3(LS - W + 0.12, 0, TILEMAN_Z);
 
   return {
     group, lighting, lamps: lighting.lamps, envLevel: 1, mCeiling, mHeaders, hangingSign, hangingBaseY,
-    posters, eyeIris, eyeIrisBase, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny,
+    posters, eyeIris, eyeIrisBase, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny, tileMan, tileManHome,
   };
 }

@@ -185,6 +185,21 @@ function judge(turnedBack: boolean) {
   generateCorridor();
 }
 
+/** 異変に捕まった: 画面が暗転し、0番の最初の場所（待合）に戻される。見つけた異変の記録は残す */
+const fadeEl = document.getElementById('fade')!;
+function caught() {
+  pendingSign = null;
+  game.currentLevel = 0;
+  player.x = 1.5; player.z = 1.5; player.yaw = -Math.PI / 2; player.pitch = 0;
+  vel.f = vel.s = 0;
+  generateCorridor();
+  fadeEl.classList.remove('out');
+  fadeEl.classList.add('on');
+  void fadeEl.offsetWidth; // 一度真っ暗にしてから、ゆっくり明るくする
+  fadeEl.classList.add('out');
+  fadeEl.classList.remove('on');
+}
+
 function gameClear() {
   game.gameState = 'clear';
   document.exitPointerLock?.();
@@ -399,6 +414,7 @@ function frame() {
       loop: (n, vol) => sound.loop(n, vol, 0.3, 0.3),
       look: camera.getWorldDirection(lookDir),
       inView: (c, r) => frustum.intersectsSphere(viewSphere.set(c, r)),
+      caught,
     }, game.mem);
   }
   sound.endFrame();
@@ -462,7 +478,7 @@ async function init() {
   world.granny.setCastShadow(true);
   renderer.gl.initTexture(world.man.smileTex);
   await renderer.precompile();
-  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.tracks.group, world.hangingScrawl, world.granny.group]);
+  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.tracks.group, world.hangingScrawl, world.granny.group, world.tileMan.group]);
   await renderer.precompile();
   warmUpMan();
   world.leak.group.visible = false;
@@ -472,6 +488,8 @@ async function init() {
   world.granny.group.visible = false;
   world.granny.bubble.visible = false;
   world.granny.setCastShadow(false);
+  world.tileMan.group.visible = false;
+  world.tileMan.group.position.copy(world.tileManHome);
   clearTimeout(slow);
   setStatus('');
   startBtn.disabled = false;
@@ -488,6 +506,9 @@ function warmUpMan() {
   g.position.set(player.x + 2.5, 0, player.z); // 開始時は +x の向きを見ている
   world.granny.group.position.set(player.x + 2.2, 0, player.z + 0.8); // 異変のおばあさんも同じ（吹き出しごと）
   world.shadow.position.set(player.x + 2.6, 0, player.z - 0.9); // 黒い人影も
+  const tm = world.tileMan.group;
+  tm.visible = true; // 耳タイルマンも
+  tm.position.set(player.x + 2.4, 0, player.z + 1.4);
   camera.position.set(player.x, EYE, player.z);
   camera.rotation.set(0, player.yaw, 0);
   world.lighting.update(camera.position);
