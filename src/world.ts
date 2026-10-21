@@ -30,6 +30,9 @@ export interface World {
   hangingScrawl: THREE.Mesh;
   hangingBaseY: number;
   posters: { mesh: THREE.Mesh; kind: T.PosterKind }[];
+  /** 眼科ポスターの黒目と、正面を見ているときの位置 */
+  eyeIris: THREE.Mesh;
+  eyeIrisBase: THREE.Vector3;
   door: THREE.Object3D; // ヒンジを軸に回す
   doorVoid: THREE.Mesh;
   signs: { aEast: THREE.Mesh; aWest: THREE.Mesh; bEast: THREE.Mesh; bWest: THREE.Mesh };
@@ -377,6 +380,16 @@ export function buildWorld(man: Man, granny: Granny): World {
     return { mesh: m, kind };
   });
 
+  // 眼科ポスターの黒目: 絵の白目（キャンバス 360x504 の (180, 200)）の上に重ねた円板。目が追う異変で動かす
+  const eyeZ = POSTER_Z[POSTER_KINDS.indexOf('eye')];
+  const eyeIris = new THREE.Mesh(new THREE.CircleGeometry(0.111, 40), new THREE.MeshStandardMaterial({
+    map: T.irisTexture(), ...acrylic, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  }));
+  eyeIris.receiveShadow = true;
+  placeOnWall(eyeIris, LS - W, 1.5 + 0.7 - (200 / 504) * 1.4, eyeZ, 1, 0, 0.0215);
+  group.add(eyeIris);
+  const eyeIrisBase = eyeIris.position.clone();
+
   // ドア（判定通路の東側の壁）: 塗装鋼板の扉、アルミの枠、レバーハンドル、ステンレスの蹴板、表示板
   const doorSet = P.paintedSteel(0x7f8784);
   const doorMat = new THREE.MeshStandardMaterial({ ...doorSet, roughness: 1, metalness: 0.2 });
@@ -484,6 +497,6 @@ export function buildWorld(man: Man, granny: Granny): World {
 
   return {
     group, lighting, lamps: lighting.lamps, envLevel: 1, mCeiling, mHeaders, hangingSign, hangingBaseY,
-    posters, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny,
+    posters, eyeIris, eyeIrisBase, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny,
   };
 }

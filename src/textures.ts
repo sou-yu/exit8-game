@@ -179,9 +179,20 @@ export function guideTexture(): THREE.CanvasTexture {
   return toTexture(c);
 }
 
+/** 眼科ポスターの黒目（円板に貼る）: 緑の虹彩と黒い瞳 */
+export function irisTexture(): THREE.CanvasTexture {
+  const [c, g] = canvas(128, 128);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = '#2b5f4a';
+  g.beginPath(); g.arc(64, 64, 63, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#000';
+  g.beginPath(); g.arc(64, 64, (63 * 18) / 40, 0, Math.PI * 2); g.fill();
+  return toTexture(c);
+}
+
 export type PosterKind = 'bath' | 'bakery' | 'eye' | 'books' | 'manner';
 
-/** strange: 異変の絵（眼科だけは 'phone' で電話番号だけが変わる） */
+/** strange: 異変の絵（眼科は 'phone' で電話番号だけが変わる） */
 export function posterTexture(kind: PosterKind, strange: boolean | 'phone' = false): THREE.CanvasTexture {
   const phone = strange === 'phone';
   if (phone) strange = false;
@@ -216,26 +227,12 @@ export function posterTexture(kind: PosterKind, strange: boolean | 'phone' = fal
     case 'eye': {
       g.fillStyle = '#f7faf8'; g.fillRect(0, 0, 360, 504);
       g.fillStyle = '#3c9a74'; g.fillRect(0, 430, 360, 74);
-      // 目のアイコン
+      // 目のアイコン（白目だけ。黒目は irisTexture を貼った別の円板で、目が追う異変で動かす）
       g.fillStyle = '#fff'; g.strokeStyle = '#2b5f4a'; g.lineWidth = 8;
       g.beginPath(); g.ellipse(180, 200, 120, 62, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-      g.fillStyle = strange ? '#9b0f0f' : '#2b5f4a';
-      g.beginPath(); g.arc(180, 200, strange ? 54 : 40, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#000';
-      g.beginPath(); g.arc(180, 200, strange ? 8 : 18, 0, Math.PI * 2); g.fill();
-      if (strange) {
-        g.strokeStyle = '#c42020'; g.lineWidth = 2;
-        for (let k = 0; k < 10; k++) {
-          const a = (k / 10) * Math.PI * 2;
-          g.beginPath();
-          g.moveTo(180 + Math.cos(a) * 60, 200 + Math.sin(a) * 34);
-          g.lineTo(180 + Math.cos(a) * 110, 200 + Math.sin(a) * 56);
-          g.stroke();
-        }
-      }
       text(g, 'ひかり眼科', 180, 70, 54, '#2b5f4a');
-      text(g, strange ? '見えていますか' : '見えにくさ、', 180, 320, 34, '#333');
-      text(g, strange ? 'ほんとうに' : 'ありませんか', 180, 368, 34, '#333');
+      text(g, '見えにくさ、', 180, 320, 34, '#333');
+      text(g, 'ありませんか', 180, 368, 34, '#333');
       text(g, phone ? '予約 03-1133-315' : '予約 03-0000-0000', 180, 467, 24, '#fff', 'normal');
       break;
     }

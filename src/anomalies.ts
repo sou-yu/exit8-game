@@ -62,6 +62,7 @@ export function resetWorld(w: World, man: ManState) {
     const m = p.mesh.material as THREE.MeshStandardMaterial;
     m.map = poster(p.kind, false);
   });
+  w.eyeIris.position.copy(w.eyeIrisBase);
   setHangingSign(w, 'normal');
   w.lamps.forEach((l) => {
     l.visible = true;
@@ -76,6 +77,7 @@ export function resetWorld(w: World, man: ManState) {
   w.mHeaders.forEach((h) => (h.visible = false));
   w.hangingSign.position.y = w.hangingBaseY;
   w.man.setSmile(false);
+  w.man.group.scale.setScalar(1);
   w.shadow.visible = false;
   w.leak.group.visible = false;
   w.hangingScrawl.visible = false;
@@ -86,6 +88,12 @@ export function resetWorld(w: World, man: ManState) {
   man.stare = false;
 }
 
+/** 巨大化したおじさんの大きさの倍率（身長 約 1.75m → 約 2.6m。天井は 2.8m、出口案内の板の下端は約 2.1m） */
+const MAN_GIANT = 1.5;
+/** 目が追う異変: プレイヤーの目の高さ、黒目が動ける楕円の半径（横・縦）、追う速さ */
+const EYE_Y = 1.6;
+const GAZE_RZ = 0.2, GAZE_RY = 0.045;
+const GAZE_FOLLOW = 5;
 /** おばあさんが立つ位置: プレイヤーの真後ろ（来た方向、+z）にこの距離 */
 /** うめき声: すき間の中心（扉の中心から z 方向へのずれ）、聞こえる距離と見る向きの幅 */
 const DOOR_GAP_DZ = 0.3;
@@ -101,10 +109,21 @@ const grannyAt = new THREE.Vector3();
 
 export const ANOMALIES: Anomaly[] = [
   {
-    id: 'poster_eye', name: '眼科のポスターの目と文字が変わる', category: 'A',
-    apply(w) {
-      const p = w.posters.find((q) => q.kind === 'eye')!;
-      (p.mesh.material as THREE.MeshStandardMaterial).map = poster('eye', true);
+    // 眼科ポスターの黒目が、白目の中を動いていつもプレイヤーのほうを見ている
+    id: 'poster_gaze', name: '眼科のポスターの目が、こちらを目で追ってくる', category: 'A',
+    apply() {},
+    update(ctx) {
+      const w = ctx.world;
+      const b = w.eyeIrisBase;
+      const dx = ctx.px - b.x, dy = EYE_Y - b.y, dz = ctx.pz - b.z;
+      const d = Math.hypot(dx, dy, dz);
+      // 白目の中で動ける幅（横 z と縦 y）。はみ出さないよう楕円の中に収める
+      let oz = (dz / d) * GAZE_RZ * 1.6, oy = (dy / d) * GAZE_RY * 3;
+      const e = Math.hypot(oz / GAZE_RZ, oy / GAZE_RY);
+      if (e > 1) { oz /= e; oy /= e; }
+      const k = 1 - Math.exp(-GAZE_FOLLOW * ctx.dt);
+      w.eyeIris.position.z += (b.z + oz - w.eyeIris.position.z) * k;
+      w.eyeIris.position.y += (b.y + oy - w.eyeIris.position.y) * k;
     },
   },
   {
@@ -163,6 +182,22 @@ export const ANOMALIES: Anomaly[] = [
   {
     id: 'man_smile', name: '通行人が満面の笑みを浮かべている', category: 'B',
     apply(w) { w.man.setSmile(true); },
+  },
+  {
+    // 通行人のおじさんが、天井に頭が届きそうなほど大きい（歩幅も大きいので、少し速く歩いてくる）。
+    // 頭が出口案内の板より高いので、板の手前で立ち止まり、こちらへ向き直って見下ろす
+    id: 'man_giant', name: '通行人のおじさんが巨大化している', category: 'B',
+    apply(w, man) {
+      w.man.group.scale.setScalar(MAN_GIANT);
+      man.speed = MAN_SPEED * 1.2;
+    },
+    update(ctx) {
+      const stopZ = ctx.world.hangingSign.position.z - 1;
+      if (ctx.man.z > stopZ) {
+        ctx.man.z = stopZ;
+        ctx.man.walking = false;
+      }
+    },
   },
   {
     id: 'man_stare', name: '通行人が立ち止まってこちらを見つめる', category: 'B',

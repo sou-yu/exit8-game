@@ -28,7 +28,7 @@ export interface Man {
   mixer: THREE.AnimationMixer;
   walk: THREE.AnimationAction;
   idle: THREE.AnimationAction;
-  /** 歩行アニメーションの再生速度を、移動の速さ（m/秒）に合わせる */
+  /** 歩行アニメーションの再生速度を、移動の速さ（m/秒）に合わせる（大きくしたときは歩幅も大きいので、その分ゆっくり） */
   setPace(speed: number): void;
   setSmile(on: boolean): void;
   /** 異変で初めて使う画像（先に GPU へ送っておく） */
@@ -72,7 +72,7 @@ export async function loadMan(): Promise<Man> {
   group.add(blob(0.9));
   return {
     group, mixer, walk, idle, smileTex,
-    setPace(speed) { walk.timeScale = speed / WALK_SPEED; },
+    setPace(speed) { walk.timeScale = speed / (WALK_SPEED * group.scale.y); },
     setSmile(on) {
       smileMeshes.forEach(({ mesh, index }) => { mesh.morphTargetInfluences![index] = on ? 1 : 0; });
       faceMats.forEach((m) => { m.map = on ? smileTex : normalTex; m.needsUpdate = true; });
