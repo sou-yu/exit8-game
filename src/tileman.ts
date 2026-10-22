@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as P from './pbr';
 
 /*
- * 耳タイルマン（異変）。通路の壁と同じ白い施釉タイル（黒っぽい目地の格子）の体をした、細身で裸足の人型。
+ * 耳タイルマン（異変）。通路の壁と同じ白い施釉タイル（明るい灰色の目地の格子）の体をした、細身で裸足の人型。
  * 顔のないのっぺらぼうの頭の両脇に、頭より大きな人間の耳が付いている。
  * 壁に背をつけて直立し、タイル柄に擬態している。近づくと歩き出して追いかけてくる（動きは anomalies.ts）。
  * 体は単純な形を組み合わせて作り、タイル柄は正面から投影する（壁際に立つと、壁の目地とほぼ同じ間隔で並ぶ）。
@@ -27,18 +27,18 @@ const EAR_SCALE = 1.3;
 /**
  * 体の色。壁の高さどおりに塗り分ける（体は壁際に立った姿勢の高さ y で貼るので、壁と同じ高さに線が来る）:
  * 0〜0.1m 黒い巾木、0.1〜0.99m 横長タイル（馬目地）、0.99〜1.12m 緑の帯、その上は白い施釉タイル（1m に 7 枚）。
- * 目地は壁より少し黒っぽい。縦 2m 分を 1 枚に描き、横は 1m ごとにくり返す
+ * 目地も壁と同じ色。縦 2m 分を 1 枚に描き、横は 1m ごとにくり返す
  */
 function groutTexture(): THREE.CanvasTexture {
-  const n = 1024, hgt = 2, t = n / 7, gw = 6;
+  const n = 1024, hgt = 2, t = n / 7, gw = 5; // 目地の幅は壁とほぼ同じ（約 5mm）
   const c = document.createElement('canvas');
   c.width = n;
   c.height = n * hgt;
   const g = c.getContext('2d')!;
   /** 床からの高さ（m）→ キャンバスの y（上が高い） */
   const py = (h: number) => (hgt - h) * n;
-  const grout = '#3a3b3c';
-  g.fillStyle = grout;
+  // 目地は壁と同じ明るい灰色。壁は目地のくぼみの陰りで少し暗く見えるので、その分だけ暗めにする
+  g.fillStyle = '#9d9b97';
   g.fillRect(0, 0, n, n * hgt);
   // 帯より上: 白い正方形のタイル
   for (let i = 0; i < 7; i++) {
@@ -48,15 +48,15 @@ function groutTexture(): THREE.CanvasTexture {
       g.fillRect(i * t + gw / 2, j * t + gw / 2, t - gw, t - gw);
     }
   }
-  // 腰壁: 横長のタイル（200x100mm、段ごとに半分ずらす）。壁の腰壁よりわずかに灰色
-  g.fillStyle = grout;
+  // 腰壁: 横長のタイル（200x100mm、段ごとに半分ずらす）
+  g.fillStyle = '#93928e';
   g.fillRect(0, py(BAND_Y0), n, py(SKIRT_Y) - py(BAND_Y0));
   const tw = n * 0.2;
   for (let r = 0; SKIRT_Y + r * 0.1 < BAND_Y0; r++) {
     const y1 = py(Math.min(BAND_Y0, SKIRT_Y + (r + 1) * 0.1)), y0 = py(SKIRT_Y + r * 0.1);
     for (let i = -1; i < 6; i++) {
       const x = i * tw + (r % 2 ? tw / 2 : 0);
-      const k = 200 + ((i + r * 3 + 9) % 4) * 3;
+      const k = 192 + ((i + r * 3 + 9) % 4) * 3;
       g.fillStyle = `rgb(${k - 2},${k},${k - 3})`;
       g.fillRect(x + gw / 2, y1 + gw / 2, tw - gw, y0 - y1 - gw);
     }
@@ -78,7 +78,7 @@ function groutTexture(): THREE.CanvasTexture {
 const BAND_Y0 = 0.99, BAND_Y1 = 1.12, SKIRT_Y = 0.1;
 
 export function buildTileMan(): TileMan {
-  // 凹凸と艶は壁の上のタイルと同じ。色は壁の高さどおりに、帯・巾木まで塗り分ける（目地が壁よりわずかに濃いのが手がかり）
+  // 凹凸と艶は壁の上のタイルと同じ。色は壁の高さどおりに、帯・巾木まで塗り分ける
   const set = P.wallGlazedTile();
   const mat = new THREE.MeshStandardMaterial({ ...set, map: groutTexture(), roughness: 1 });
   const group = new THREE.Group();
