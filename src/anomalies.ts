@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import * as T from './textures';
 import { MAN_SPEED } from './man';
-import { LM, LS, W, type World } from './world';
+import { canStand, LM, LS, W, type World } from './world';
+import { PENGUIN_COUNT, type PenguinPose } from './penguins';
 
 export interface Ctx {
   world: World;
@@ -75,6 +76,7 @@ export function resetWorld(w: World, man: ManState) {
   w.envLevel = 1;
   w.door.rotation.y = 0;
   w.tracks.group.visible = false;
+  w.penguins.group.visible = false;
   w.mCeiling.position.y = 0;
   w.mHeaders.forEach((h) => (h.visible = false));
   w.hangingSign.position.y = w.hangingBaseY;
@@ -115,6 +117,11 @@ const GRANNY_SPHERE_Y = 0.95, GRANNY_SPHERE_R = 1.0;
 const GRANNY_SEEN_R = 0.5;
 const grannyAt = new THREE.Vector3();
 
+/** ペンギンの群れ: 判定通路に入ってから走ってくるまでの秒数、走る速さ（早歩き 3.0 m/秒なら逃げられる）、速さに届くまでの時間、
+ *  1 秒の歩数（左右 1 歩ずつで 1）、ぶつかる距離、仲間との間隔 */
+const PENG_DELAY = 5, PENG_SPEED = 2.4, PENG_ACCEL = 0.8, PENG_STEPS = 2.6, PENG_CATCH = 0.5, PENG_GAP = 0.55;
+const flock: (PenguinPose & { v: number; vmax: number; lane: number })[] = [];
+
 export const ANOMALIES: Anomaly[] = [
   {
     // 眼科ポスターの黒目が、白目の中を動いていつもプレイヤーのほうを見ている
@@ -147,8 +154,58 @@ export const ANOMALIES: Anomaly[] = [
     },
   },
   {
-    id: 'penguin_tracks', name: '通路の床一面に、ペンギンの濡れた足跡がたくさん続いている', category: 'A',
+    // 足跡に気づかず進んでいると、しばらくして奥の待合からペンギンの群れが角を曲がって走ってくる。ぶつかると 0番に戻される
+    id: 'penguin_tracks', name: '通路の床一面にペンギンの濡れた足跡が続き、しばらくすると奥からペンギンの群れが走ってくる', category: 'A',
     apply(w) { w.tracks.group.visible = true; },
+    update(ctx, mem) {
+      const pg = ctx.world.penguins;
+      if (!mem.started) {
+        if (ctx.tInM < PENG_DELAY) return;
+        mem.started = 1;
+        // 奥の待合（通路の角の先、判定通路からは見えない所）に群れを並べる
+        flock.length = 0;
+        for (let i = 0; i < PENGUIN_COUNT; i++) {
+          const col = i % 6, row = Math.floor(i / 6);
+          flock.push({
+            x: LS + 0.7 + col * 1.0 + (Math.random() - 0.5) * 0.4,
+            z: -LM - 0.5 - row * 0.62 - (Math.random() - 0.5) * 0.2,
+            yaw: -Math.PI / 2, scale: 0.85 + Math.random() * 0.2, phase: Math.random() * 6.28, run: 0,
+            v: 0, vmax: PENG_SPEED * (0.85 + Math.random() * 0.3), lane: (Math.random() - 0.5) * (W - 1.2),
+          });
+        }
+        pg.group.visible = true;
+      }
+      for (const p of flock) {
+        // 待合にいるうちは通路の入口へ、通路に入ったらプレイヤーへ向かう（並ぶ位置は少しずつばらける）
+        const inM = p.z > -LM + 0.4 || p.x < LS - 0.3;
+        const tx = inM ? ctx.px : LS - W / 2 + p.lane, tz = inM ? ctx.pz : -LM + 1.5;
+        let dx = tx - p.x, dz = tz - p.z;
+        const d = Math.hypot(dx, dz) || 1;
+        if (inM && d < PENG_CATCH * p.scale) {
+          ctx.sound('thud');
+          ctx.caught();
+          return;
+        }
+        dx /= d; dz /= d;
+        // 近くの仲間とは少し離れる
+        for (const o of flock) {
+          if (o === p) continue;
+          const ox = p.x - o.x, oz = p.z - o.z, od = Math.hypot(ox, oz);
+          if (od > 0 && od < PENG_GAP) { dx += (ox / od) * (PENG_GAP - od) * 2.5; dz += (oz / od) * (PENG_GAP - od) * 2.5; }
+        }
+        const target = Math.atan2(dx, dz);
+        let diff = target - p.yaw;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        p.yaw += diff * (1 - Math.exp(-ctx.dt / 0.18));
+        p.v = Math.min(p.vmax, p.v + (p.vmax / PENG_ACCEL) * ctx.dt);
+        const mx = Math.sin(p.yaw) * p.v * ctx.dt, mz = Math.cos(p.yaw) * p.v * ctx.dt;
+        if (canStand(p.x + mx, p.z, 0.2)) p.x += mx;
+        if (canStand(p.x, p.z + mz, 0.2)) p.z += mz;
+        p.run = p.v / p.vmax;
+        p.phase += ctx.dt * Math.PI * 2 * PENG_STEPS * (0.4 + 0.6 * p.run) / p.scale;
+      }
+      pg.update(flock);
+    },
   },
   {
     // ドアの前まで来て、すき間の奥の暗がりを覗き込むと、男性の悲鳴が聞こえる。覗き込んでいる間は間をおいて繰り返す

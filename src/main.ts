@@ -7,6 +7,7 @@ import { Sound } from './audio';
 import { TouchControls, isTouchDevice } from './touch';
 import { loadMan, MAN_SPEED } from './man';
 import { loadGranny } from './granny';
+import { loadPenguins } from './penguins';
 
 const GOAL = 8;
 const ANOMALY_RATE = 0.6;
@@ -447,9 +448,10 @@ async function init() {
   await nextPaint();
   const manModel = await loadMan();
   const grannyModel = await loadGranny();
+  const penguins = await loadPenguins();
   setStatus('通路を組み立てています');
   await nextPaint();
-  world = buildWorld(manModel, grannyModel);
+  world = buildWorld(manModel, grannyModel, penguins);
   scene.add(world.group);
   renderer.attach(world.lighting);
   if (params.has('q')) {
@@ -471,6 +473,7 @@ async function init() {
   world.man.group.visible = true;
   world.leak.group.visible = true; // 異変の小道具も同じ
   world.tracks.group.visible = true;
+  world.penguins.group.visible = true;
   world.hangingScrawl.visible = true;
   world.shadow.visible = true;
   world.granny.group.visible = true;
@@ -478,11 +481,12 @@ async function init() {
   world.granny.setCastShadow(true);
   renderer.gl.initTexture(world.man.smileTex);
   await renderer.precompile();
-  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.tracks.group, world.hangingScrawl, world.granny.group, world.tileMan.group]);
+  renderer.captureEnvironment(new THREE.Vector3(LS - W / 2, 1.5, -15), [world.man.group, world.shadow, world.leak.group, world.tracks.group, world.penguins.group, world.hangingScrawl, world.granny.group, world.tileMan.group]);
   await renderer.precompile();
   warmUpMan();
   world.leak.group.visible = false;
   world.tracks.group.visible = false;
+  world.penguins.group.visible = false;
   world.hangingScrawl.visible = false;
   world.shadow.visible = false;
   world.granny.group.visible = false;
@@ -509,6 +513,8 @@ function warmUpMan() {
   const tm = world.tileMan.group;
   tm.visible = true; // 耳タイルマンも
   tm.position.set(player.x + 2.4, 0, player.z + 1.4);
+  // ペンギンの群れも 1 羽だけ見える所に置く（ほかは大きさ 0）
+  world.penguins.update([{ x: player.x + 2.3, z: player.z - 1.3, yaw: 0, scale: 1, phase: 0, run: 1 }]);
   camera.position.set(player.x, EYE, player.z);
   camera.rotation.set(0, player.yaw, 0);
   world.lighting.update(camera.position);

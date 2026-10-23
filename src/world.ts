@@ -16,6 +16,7 @@ export { W, H, LS, LM, S_CENTER, FORWARD_SHIFT, canStand } from './layout';
 export type { Lamp } from './lighting';
 export type { Man } from './man';
 import type { Granny } from './granny';
+import type { Penguins } from './penguins';
 
 export interface World {
   group: THREE.Group;
@@ -47,6 +48,8 @@ export interface World {
   /** 壁のタイルに擬態した耳タイルマン（異変、普段は非表示）と、壁際に立つ位置 */
   tileMan: TileMan;
   tileManHome: THREE.Vector3;
+  /** 足跡の異変で通路の奥から走ってくるペンギンの群れ（普段は非表示） */
+  penguins: Penguins;
 }
 
 /** 壁の向き: 法線 (nx, nz) を向く物を (x, y, z) に置く */
@@ -112,7 +115,7 @@ function wallProps(): WallProp[] {
   return p;
 }
 
-export function buildWorld(man: Man, granny: Granny): World {
+export function buildWorld(man: Man, granny: Granny, penguins: Penguins): World {
   const group = new THREE.Group();
 
   // ================= 外殻 =================
@@ -494,6 +497,7 @@ export function buildWorld(man: Man, granny: Granny): World {
   group.add(leak.group);
   const tracks = buildTracks(LS - W, LS, 0, -LM);
   group.add(tracks.group);
+  group.add(penguins.group);
 
   group.add(man.group);
   const shadow = buildShadow();
@@ -506,6 +510,6 @@ export function buildWorld(man: Man, granny: Granny): World {
 
   return {
     group, lighting, lamps: lighting.lamps, envLevel: 1, mCeiling, mHeaders, hangingSign, hangingBaseY,
-    posters, eyeIris, eyeIrisBase, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny, tileMan, tileManHome,
+    posters, eyeIris, eyeIrisBase, door, doorVoid, signs, man, shadow, leak, tracks, hangingScrawl, granny, tileMan, tileManHome, penguins,
   };
 }

@@ -34,6 +34,7 @@ iPhone / iPad: 画面の左側を指でなぞって移動（大きく倒すと�
 | `src/tileman.ts` | 異変「耳タイルマン」の体（単純な形の組み合わせ、タイル柄は正面から投影）と歩く動き |
 | `src/leak.ts` | 異変「換気口から赤い液体」の筋・しずく・水たまり |
 | `src/tracks.ts` | 異変「ペンギンの足跡」の足跡（形はキャンバスで描き、InstancedMesh で並べる） |
+| `src/penguins.ts` | 同じ異変の後半で奥から走ってくるコウテイペンギンの群れ（Blender 製 `src/assets/penguin.glb`、作業ファイルは `8番出口/blender/penguin/penguin.blend`。部品ごとに InstancedMesh、走る動きはコードで付ける） |
 | `src/anomalies.ts` | 異変の一覧と、通常状態に戻す処理 |
 | `src/textures.ts` | 看板・広告などの絵（すべてプログラムで描画） |
 | `src/audio.ts` | 空調音・足音・ドアの奥のうめき声などの効果音（WebAudioで合成） |
