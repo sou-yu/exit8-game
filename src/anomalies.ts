@@ -154,9 +154,13 @@ export const ANOMALIES: Anomaly[] = [
     },
   },
   {
-    // 足跡に気づかず進んでいると、しばらくして奥の待合からペンギンの群れが角を曲がって走ってくる。ぶつかると 0番に戻される
-    id: 'penguin_tracks', name: '通路の床一面にペンギンの濡れた足跡が続き、しばらくすると奥からペンギンの群れが走ってくる', category: 'A',
+    id: 'penguin_tracks', name: '通路の床一面に、ペンギンの濡れた足跡がたくさん続いている', category: 'A',
     apply(w) { w.tracks.group.visible = true; },
+  },
+  {
+    // 判定通路に入ってしばらくすると、奥の待合からペンギンの群れが角を曲がって走ってくる。ぶつかると 0番に戻される
+    id: 'penguin_rush', name: 'しばらくすると、通路の奥からペンギンの群れが走ってくる', category: 'D',
+    apply() {},
     update(ctx, mem) {
       const pg = ctx.world.penguins;
       if (!mem.started) {
