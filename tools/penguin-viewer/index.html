@@ -1,0 +1,40 @@
+<meta charset="utf-8">
+<title>走るコウテイペンギン</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 一画面: 舞台いっぱいの 3D、下に操作の帯 */
+:root {
+  --bg: #e9ecee; --panel: #f7f8f9; --fg: #1d2328; --muted: #5b6670; --accent: #c98a12; --on-accent: #1d1606; --line: #c9d0d5;
+  --display: "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Noto Sans JP", sans-serif;
+  --mono: ui-monospace, Consolas, "SFMono-Regular", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14181b; --panel: #1c2226; --fg: #e6eaed; --muted: #95a1ab; --accent: #f0b23c; --line: #2e373d; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #14181b; --panel: #1c2226; --fg: #e6eaed; --muted: #95a1ab; --accent: #f0b23c; --line: #2e373d; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--display); display: flex; flex-direction: column; overflow: hidden; }
+#stage { flex: 1; min-height: 0; position: relative; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#cap { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); top: 12px; display: grid; gap: 2px; pointer-events: none; color: #1d2328; }
+#cap h1 { margin: 0; font-size: 1.15rem; font-weight: 700; text-wrap: balance; }
+#cap p { margin: 0; font-size: .8rem; color: #3d464d; }
+#bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; background: var(--panel); border-top: 1px solid var(--line);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: .85rem; padding: 6px 14px; background: transparent; color: var(--fg); border: 0; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.seg button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label { display: inline-flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); }
+input[type=range] { accent-color: var(--accent); width: 130px; max-width: 34vw; }
+output { font-family: var(--mono); font-size: .8rem; color: var(--fg); min-width: 5.5em; font-variant-numeric: tabular-nums; }
+</style>
+<div id="stage">
+  <div id="cap"><h1>走るコウテイペンギン</h1><p>異変「ペンギンの群れ」と同じモデルと動き。ドラッグで回転、ホイールやピンチで拡大</p></div>
+</div>
+<div id="bar">
+  <div class="seg" role="group" aria-label="表示">
+    <button id="one" aria-pressed="true">1羽</button><button id="many" aria-pressed="false">群れ</button>
+  </div>
+  <label for="speed">速さ <input id="speed" type="range" min="0" max="1.2" step="0.05" value="1"> <output id="speedOut">2.4 m/秒</output></label>
+  <label for="slow">再生 <input id="slow" type="range" min="0.1" max="1" step="0.05" value="1"> <output id="slowOut">×1.00</output></label>
+</div>
+<script type="module" src="./main.ts"></script>
